@@ -1,6 +1,12 @@
 ---
 name: app-docker-deploy-with-traefik
-description: Generate Docker and Traefik deployment configuration for any application (Node.js, Python, Go, etc). Creates Dockerfile, docker-compose.yml, docker-compose.for-traefik.yml overlay, and .env.sample. Use when user wants to dockerize an app, add Docker deployment, deploy with Traefik, or set up HTTPS/SSL with Let's Encrypt.
+description: >
+  Generate Docker and Traefik deployment configurations for any application
+  (Node.js, Python, Go, Rust, Java). Creates Dockerfile, docker-compose.yml,
+  docker-compose.for-traefik.yml overlay, and .env.sample with production best
+  practices. Use when: dockerize app, containerize, add Docker, deploy with
+  Traefik, reverse proxy setup, HTTPS/SSL, Let's Encrypt certificates,
+  production deployment, docker-compose setup. Requires: Docker, docker-compose.
 ---
 
 # Docker + Traefik Deployment Setup
@@ -212,3 +218,61 @@ Generate password hash: `htpasswd -nb username password`
 5. **Resource limits** - Add memory/CPU limits in production
 6. **Logging** - Configure appropriate log drivers
 7. **Non-root users** - Run containers as non-root when possible
+
+## Helper Scripts
+
+Located in the `scripts/` directory:
+
+### generate-htpasswd.sh
+
+Generate password hashes for Traefik basic auth:
+
+```bash
+./scripts/generate-htpasswd.sh admin mypassword
+```
+
+### validate-compose.py
+
+Validate docker-compose files for common issues:
+
+```bash
+python scripts/validate-compose.py docker-compose.yml docker-compose.for-traefik.yml
+```
+
+Requires: `pip install pyyaml`
+
+### check-network.sh
+
+Check if the traefik network exists (and optionally create it):
+
+```bash
+./scripts/check-network.sh          # Check only
+./scripts/check-network.sh --create # Create if missing
+```
+
+## Template Files
+
+Located in the `templates/` directory. Copy and customize:
+
+| Template                         | Description                        |
+| -------------------------------- | ---------------------------------- |
+| `Dockerfile.node`                | Node.js multi-stage build          |
+| `Dockerfile.python`              | Python with uv package manager     |
+| `docker-compose.yml`             | Base compose with app + PostgreSQL |
+| `docker-compose.for-traefik.yml` | Traefik routing overlay            |
+| `.dockerignore`                  | Optimized Docker build context     |
+| `.env.sample`                    | Environment variables template     |
+
+Replace placeholders: `{{SERVICE_NAME}}`, `{{PORT}}`, `{{NODE_VERSION}}`, etc.
+
+## Additional Resources
+
+- [DOCKERFILES.md](DOCKERFILES.md) - Complete Dockerfile templates for all languages
+- [EXAMPLES.md](EXAMPLES.md) - Real-world deployment examples
+
+## Requirements
+
+- **Docker** >= 20.10
+- **Docker Compose** >= 2.0 (V2 syntax)
+- **Traefik** >= 2.0 (running with `webcert` certificate resolver)
+- External `traefik` network: `docker network create traefik`

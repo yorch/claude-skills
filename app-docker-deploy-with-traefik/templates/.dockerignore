@@ -1,0 +1,89 @@
+# =============================================================================
+# .dockerignore Template
+# Speeds up builds by excluding unnecessary files from Docker context
+# =============================================================================
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Dependencies (installed in container)
+node_modules
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+venv
+.venv
+__pycache__
+*.pyc
+*.pyo
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+target/
+.cargo
+
+# Build outputs
+dist
+build
+*.egg-info
+*.egg
+.eggs
+
+# IDE and editor
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings
+
+# Test and docs
+tests
+test
+__tests__
+*.test.js
+*.spec.js
+docs
+*.md
+!README.md
+
+# Docker (don't include Docker files in context)
+Dockerfile*
+docker-compose*
+.docker
+.dockerignore
+
+# Environment and secrets
+.env
+.env.*
+!.env.sample
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Logs and temp files
+*.log
+logs
+tmp
+temp
+.tmp
+.temp
+.cache
+.npm
+.eslintcache
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Data directories (mounted as volumes)
+data/

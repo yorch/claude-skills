@@ -1,0 +1,35 @@
+# =============================================================================
+# Docker Compose Traefik Overlay Template
+# Replace: {{SERVICE_NAME}}, {{PORT}}
+# Usage: docker compose -f docker-compose.yml -f docker-compose.for-traefik.yml up -d
+# =============================================================================
+
+services:
+  app:
+    networks:
+      - default
+      - traefik
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.docker.network=traefik'
+      # Service (internal port)
+      - 'traefik.http.services.{{SERVICE_NAME}}.loadbalancer.server.port={{PORT}}'
+      # HTTPS Router
+      - 'traefik.http.routers.{{SERVICE_NAME}}.rule=Host(`${DOMAIN:?Variable DOMAIN is required}`)'
+      - 'traefik.http.routers.{{SERVICE_NAME}}.entrypoints=websecure'
+      - 'traefik.http.routers.{{SERVICE_NAME}}.tls=true'
+      - 'traefik.http.routers.{{SERVICE_NAME}}.tls.certResolver=webcert'
+      - 'traefik.http.routers.{{SERVICE_NAME}}.service={{SERVICE_NAME}}'
+
+  db:
+    networks:
+      - default
+
+  # Uncomment if using redis
+  # redis:
+  #   networks:
+  #     - default
+
+networks:
+  traefik:
+    external: true

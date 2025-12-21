@@ -1,0 +1,57 @@
+# =============================================================================
+# Python Dockerfile Template (with uv)
+# Replace: {{PYTHON_VERSION}}, {{PORT}}, {{APP_MODULE}}
+# =============================================================================
+
+# Build stage
+FROM python:{{PYTHON_VERSION}}-slim AS builder
+
+WORKDIR /app
+
+# Install uv for fast dependency installation
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# Enable bytecode compilation for faster startup
+ENV UV_COMPILE_BYTECODE=1
+
+# Copy dependency files
+COPY pyproject.toml uv.lock* requirements.txt* ./
+
+# Install dependencies
+RUN if [ -f "uv.lock" ]; then \
+        uv sync --frozen --no-install-project --no-dev; \
+    elif [ -f "requirements.txt" ]; then \
+        uv venv /app/.venv && uv pip install --no-cache -r requirements.txt; \
+    fi
+
+# Copy application code
+COPY . .
+
+# If using pyproject.toml, install the project
+RUN if [ -f "uv.lock" ]; then uv sync --frozen --no-dev; fi
+
+# Production stage
+FROM python:{{PYTHON_VERSION}}-slim AS production
+
+WORKDIR /app
+
+# Create non-root user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Copy virtual environment
+COPY --from=builder /app/.venv /app/.venv
+
+# Copy application code
+COPY --chown=appuser:appuser . .
+
+# Add venv to PATH
+ENV PATH="/app/.venv/bin:$PATH"
+
+USER appuser
+
+EXPOSE {{PORT}}
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:{{PORT}}/health')" || exit 1
+
+CMD ["uvicorn", "{{APP_MODULE}}:app", "--host", "0.0.0.0", "--port", "{{PORT}}"]

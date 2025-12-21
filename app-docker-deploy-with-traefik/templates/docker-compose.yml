@@ -1,0 +1,51 @@
+# =============================================================================
+# Docker Compose Template
+# Replace: {{SERVICE_NAME}}, {{PORT}}, {{POSTGRES_VERSION}}
+# Remove services you don't need (db, redis, etc.)
+# =============================================================================
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - ./data/app:/app/data
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-{{PORT}}}
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      db:
+        condition: service_healthy
+    labels:
+      - 'com.centurylinklabs.watchtower.enable=true'
+      - 'com.centurylinklabs.watchtower.scope=${WATCHTOWER_SCOPE:-{{SERVICE_NAME}}}'
+
+  db:
+    image: postgres:{{POSTGRES_VERSION}}-alpine
+    restart: unless-stopped
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-{{SERVICE_NAME}}}
+      - POSTGRES_USER=${POSTGRES_USER:-{{SERVICE_NAME}}}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Variable POSTGRES_PASSWORD is required}
+    healthcheck:
+      test: pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
+      interval: 10s
+      timeout: 2s
+      retries: 10
+    labels:
+      - 'com.centurylinklabs.watchtower.enable=true'
+      - 'com.centurylinklabs.watchtower.scope=${WATCHTOWER_SCOPE:-{{SERVICE_NAME}}}'
+
+  # Optional: Redis cache
+  # redis:
+  #   image: redis:8-alpine
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./data/redis:/data
+  #   command: ['redis-server', '--save', '60', '1']
+  #   labels:
+  #     - 'com.centurylinklabs.watchtower.enable=true'
+  #     - 'com.centurylinklabs.watchtower.scope=${WATCHTOWER_SCOPE:-{{SERVICE_NAME}}}'
