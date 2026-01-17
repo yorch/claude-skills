@@ -58,6 +58,31 @@ python app-docker-deploy-with-traefik/scripts/validate-compose.py docker-compose
 
 **Validation script requires:** `pip install pyyaml`
 
+### code-changes-review
+
+Performs comprehensive code review of uncommitted changes in a git repository.
+
+**Review dimensions:**
+
+- **Correctness** - Logic errors, bugs, edge cases
+- **Security** - Vulnerabilities, injection risks, sensitive data exposure
+- **Best Practices** - Language idioms, framework conventions
+- **DRY/Reusability** - Code duplication, abstraction opportunities
+- **Code Smells** - Maintainability issues, complexity, coupling
+- **Performance** - N+1 queries, memory leaks, inefficiencies
+- **Testing** - Coverage gaps, test quality
+
+**Review modes:**
+
+- Default - Quick review focusing on critical issues
+- `--thorough` - Complete analysis including style and documentation
+- `--security` - Deep dive into OWASP Top 10 and security practices
+- `--performance` - Focus on efficiency and resource usage
+
+**Supporting files:**
+
+- [CHECKLIST.md](./code-changes-review/CHECKLIST.md) - Detailed review criteria with examples
+
 ## Creating New Skills
 
 When adding a new skill:
