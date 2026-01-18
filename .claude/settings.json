@@ -6,7 +6,8 @@
       "mcp__memory",
       "mcp__serena",
       "mcp__sequential-thinking",
-      "WebFetch(domain:docs.anthropic.com)"
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebSearch"
     ]
   }
 }
