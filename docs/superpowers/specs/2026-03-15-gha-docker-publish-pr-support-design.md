@@ -52,8 +52,15 @@ tags: |
 | `latest` | — | ✅ | — |
 
 `type=ref,event=pr` is built into `docker/metadata-action` and emits `pr-<number>`
-automatically. The `enable` guard on `datetime_sha` keeps PR images identified solely
-by PR number, without a redundant datetime_sha tag.
+automatically — it is only active on `pull_request` events, so no `enable=` guard is
+needed on that line.
+
+The `enable=${{ github.event_name != 'pull_request' }}` on the `datetime_sha` line
+works via GHA runner pre-interpolation: GHA resolves `${{ }}` expressions to `true`
+or `false` before passing the string to the action. This is distinct from
+`{{is_default_branch}}` on the `latest` line, which is a `metadata-action` bake
+template resolved by the action itself. Both mechanisms work but are not the same
+feature.
 
 ---
 
@@ -81,6 +88,20 @@ push: >-
 `contains(github.event.pull_request.labels.*.name, 'publish-docker')` reads the
 label set at run time — so if the label already exists on the PR when a new commit
 is pushed, that commit's build also pushes.
+
+**Behavior change from original expression:** The original `push:` expression was
+`github.event_name != 'workflow_dispatch' || inputs.push`, which evaluates `true`
+for any trigger type other than `workflow_dispatch` (including a hypothetical
+`schedule:` trigger). The new explicit enumeration only pushes on the three named
+event types. Any future trigger added to the workflow must be explicitly included
+in this expression.
+
+**Fork PR limitation (public repos):** On `pull_request` events from forked
+repositories, GHA restricts `GITHUB_TOKEN` to read-only regardless of the
+`permissions:` declaration. The `publish-docker` label check will pass but the
+GHCR push will fail with a permission error. This is expected GHA behavior. The
+feature works as designed only for PRs from branches within the same repository.
+Users of public repos should document this restriction for contributors.
 
 ---
 
