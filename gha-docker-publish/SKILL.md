@@ -112,7 +112,8 @@ jobs:
         with:
           images: ${{ steps.images.outputs.list }}
           tags: |
-            type=raw,value=${{ steps.commit.outputs.datetime }}_${{ steps.commit.outputs.sha }}
+            type=ref,event=pr
+            type=raw,value=${{ steps.commit.outputs.datetime }}_${{ steps.commit.outputs.sha }},enable=${{ github.event_name != 'pull_request' }}
             type=ref,event=branch
             type=raw,value=latest,enable={{is_default_branch}}
 
