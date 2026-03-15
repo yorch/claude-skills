@@ -11,7 +11,7 @@ description: |
   on pull requests with optional GHCR publish via `publish-docker` label. Covers the complete workflow
   pattern using docker/metadata-action, docker/build-push-action, and GHA cache.
 author: Claude Code
-version: 1.0.0
+version: 1.1.0
 date: 2026-03-15
 ---
 
@@ -47,7 +47,7 @@ on:
       push:
         description: "Push image to registries"
         required: false
-        default: true
+        default: false
         type: boolean
 
 env:
@@ -234,7 +234,7 @@ push: >-
 
 - On `push` / tag events: always pushes
 - On `pull_request` events: pushes only when the `publish-docker` label is present (see the PR builds section above)
-- On manual dispatch with `push: false`: builds but does not push (useful for testing the build)
+- On manual dispatch: `push` defaults to `false` (safe default — won't accidentally publish on a click). Set to `true` explicitly to push.
 
 ### Security: `env:` block for context variables in `run:` scripts
 
