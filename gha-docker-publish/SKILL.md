@@ -121,7 +121,12 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: ${{ github.event_name != 'workflow_dispatch' || inputs.push }}
+          push: >-
+            ${{
+              github.event_name == 'push' ||
+              (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'publish-docker')) ||
+              (github.event_name == 'workflow_dispatch' && inputs.push)
+            }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
