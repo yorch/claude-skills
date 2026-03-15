@@ -154,6 +154,30 @@ The `datetime_sha` format is important: it lets you sort images chronologically 
 
 `docker/metadata-action` handles the `enable={{is_default_branch}}` expression natively — `latest` is emitted only when `github.ref` matches the default branch. This is cleaner than a shell `if` block, and avoids the `|| ''` / `|| null` pitfall that causes `invalid reference format` errors (see the `gha-docker-conditional-tags` skill if you hit those issues separately).
 
+### PR builds: build always, push only with `publish-docker` label
+
+Every `pull_request` event (opened, pushed to, reopened, labeled) triggers the
+workflow and builds the Docker image. The build serves as a validation check — it
+fails fast if the Dockerfile is broken, even without pushing anything.
+
+The image is only pushed when the `publish-docker` label is present on the PR at
+the time the run starts. This is checked via:
+
+```yaml
+contains(github.event.pull_request.labels.*.name, 'publish-docker')
+```
+
+This expression reads the label set from the webhook payload at run time. If the
+label was already on the PR before a new commit was pushed, that commit's build
+also pushes.
+
+**Fork PR limitation:** On `pull_request` events from forked repositories, GitHub
+restricts `GITHUB_TOKEN` to read-only regardless of the `permissions:` declaration.
+The `publish-docker` label check passes but the GHCR push fails with a permission
+error. This is expected GHA behavior. The publish-on-label feature works only for
+PRs from branches within the same repository. If the repository is public, document
+this restriction for contributors so they know why labeling a fork PR will not push.
+
 ### Dual-registry support (optional)
 
 The external registry is entirely opt-in via repository variables and secrets:
