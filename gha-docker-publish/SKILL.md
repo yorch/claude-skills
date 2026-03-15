@@ -142,8 +142,9 @@ jobs:
 
 | Tag pattern | Example | When applied |
 |---|---|---|
-| `datetime_sha` | `202603151430_a1b2c3d` | Always — chronological + traceable |
-| Branch name | `main` | Always — human-readable current ref |
+| `pr-N` | `pr-42` | PR events only — human-readable, identifies the PR |
+| `datetime_sha` | `202603151430_a1b2c3d` | push and tag events — chronological + traceable |
+| Branch name | `main` | branch push events (not tag push events) — human-readable current ref |
 | `latest` | `latest` | Only on the default branch (`main`) |
 | Tag ref | `v1.2.3` | Only when pushing a `v*` git tag |
 
