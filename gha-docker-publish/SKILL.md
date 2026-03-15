@@ -38,6 +38,8 @@ on:
       - main
     tags:
       - "v*"
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
     inputs:
       push:
