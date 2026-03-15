@@ -1,17 +1,22 @@
 ---
 name: gha-docker-publish
 description: |
-  Generate or set up a GitHub Actions workflow that builds and publishes Docker images
-  to GHCR (GitHub Container Registry) with optional dual-registry support (e.g., Docker Hub,
-  private registry). Use this skill when: (1) setting up CI/CD Docker image publishing to GHCR,
-  (2) adding a docker-publish.yml GitHub Actions workflow, (3) configuring conditional `latest`
-  tags (only on main), (4) adding datetime+sha image tags for traceability, (5) setting up
-  dual-registry push in GitHub Actions, (6) configuring GHA layer cache for Docker builds,
-  (7) adding a manual workflow_dispatch trigger for Docker builds, (8) validating Docker builds
-  on pull requests with optional GHCR publish via `publish-docker` label. Covers the complete workflow
-  pattern using docker/metadata-action, docker/build-push-action, and GHA cache.
+  ALWAYS invoke this skill before writing any GitHub Actions workflow that builds or pushes
+  Docker images — it contains specific opinionated patterns that produce secure, reliable
+  workflows and that you cannot reliably guess. The conventions it enforces include:
+  (1) datetime+SHA image tags in YYYYMMDDHHMMSS_sha format for unambiguous build traceability,
+  (2) a `workflow_dispatch` boolean `push` input that defaults to `false` (safe dry-run by
+  default — a common mistake is using `type:choice` with `dry_run` inversion instead),
+  (3) a `publish-docker` PR label gate that lets CI validate builds on PRs without pushing,
+  (4) conditional `latest` tag using `enable={{is_default_branch}}` (never hardcoded `enable=true`),
+  (5) GHA layer cache with `mode=max` for maximum rebuild speed,
+  (6) no inline `${{ github.sha }}` in `run:` scripts (security hardening),
+  (7) dual-registry login and push patterns when publishing to both GHCR and a private registry.
+  Use this whenever the user asks to: set up GHCR publishing, add a docker-publish.yml workflow,
+  add layer caching to Docker CI, configure datetime/SHA image tags, add a manual build-only
+  dispatch trigger, push to multiple registries, or build Docker images on PRs.
 author: Claude Code
-version: 1.1.0
+version: 1.2.0
 date: 2026-03-15
 ---
 
