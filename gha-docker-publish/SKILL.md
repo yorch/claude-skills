@@ -173,7 +173,7 @@ ${{ github.event_name == 'push' && 'ghcr.io/org/app:latest' || null }}
 ```
 GHA expressions have no true `null` type. Depending on context, `null` coerces to the literal string `"null"`, which the action attempts to push as a tag named `null`.
 
-`metadata-action` avoids both pitfalls — the `enable=` option suppresses a tag entry entirely, producing no output line at all. See `gha-docker-conditional-tags` for the shell-based pattern if you need conditional tags without `metadata-action`.
+`metadata-action` avoids both pitfalls — the `enable=` option suppresses a tag entry entirely, producing no output line at all.
 
 ### PR builds: build always, push only with `publish-docker` label
 
