@@ -155,7 +155,25 @@ The `datetime_sha` format is important: it lets you sort images chronologically 
 
 ### Why `metadata-action` for `latest` instead of shell conditionals?
 
-`docker/metadata-action` handles the `enable={{is_default_branch}}` expression natively — `latest` is emitted only when `github.ref` matches the default branch. This is cleaner than a shell `if` block, and avoids the `|| ''` / `|| null` pitfall that causes `invalid reference format` errors (see the `gha-docker-conditional-tags` skill if you hit those issues separately).
+`docker/metadata-action` handles the `enable={{is_default_branch}}` expression natively — `latest` is emitted only when `github.ref` matches the default branch.
+
+The naive alternatives both fail:
+
+**❌ `|| ''` (blank line in tags block)**
+```yaml
+tags: |
+  ghcr.io/org/app:${{ steps.tag.outputs.version }}
+  ${{ github.event_name == 'push' && 'ghcr.io/org/app:latest' || '' }}
+```
+A blank line is passed as an empty tag reference, causing `invalid reference format` errors in `docker/build-push-action` (version-dependent but unreliable).
+
+**❌ `|| null`**
+```yaml
+${{ github.event_name == 'push' && 'ghcr.io/org/app:latest' || null }}
+```
+GHA expressions have no true `null` type. Depending on context, `null` coerces to the literal string `"null"`, which the action attempts to push as a tag named `null`.
+
+`metadata-action` avoids both pitfalls — the `enable=` option suppresses a tag entry entirely, producing no output line at all. See `gha-docker-conditional-tags` for the shell-based pattern if you need conditional tags without `metadata-action`.
 
 ### PR builds: build always, push only with `publish-docker` label
 
