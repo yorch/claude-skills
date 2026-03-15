@@ -222,6 +222,8 @@ permissions:
 - [ ] Place file at `.github/workflows/docker-publish.yml`
 - [ ] Replace `my-app` in the `Build image list` step with your actual image name (or set `EXTERNAL_REGISTRY_IMAGE` variable)
 - [ ] Ensure a `Dockerfile` exists at the repo root (or set `context:` appropriately)
+- [ ] To enable image push on PRs, create a `publish-docker` label in the GitHub
+      repository (Settings → Labels) — PRs without this label build but do not push
 - [ ] If using an external registry, add these to the GitHub repo settings:
   - **Variable**: `EXTERNAL_REGISTRY_URL`
   - **Variable**: `EXTERNAL_REGISTRY_IMAGE` (optional, defaults to `my-app`)
