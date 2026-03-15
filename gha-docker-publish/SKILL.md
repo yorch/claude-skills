@@ -7,7 +7,8 @@ description: |
   (2) adding a docker-publish.yml GitHub Actions workflow, (3) configuring conditional `latest`
   tags (only on main), (4) adding datetime+sha image tags for traceability, (5) setting up
   dual-registry push in GitHub Actions, (6) configuring GHA layer cache for Docker builds,
-  (7) adding a manual workflow_dispatch trigger for Docker builds. Covers the complete workflow
+  (7) adding a manual workflow_dispatch trigger for Docker builds, (8) validating Docker builds
+  on pull requests with optional GHCR publish via `publish-docker` label. Covers the complete workflow
   pattern using docker/metadata-action, docker/build-push-action, and GHA cache.
 author: Claude Code
 version: 1.0.0
@@ -24,6 +25,7 @@ Use this pattern when you need a CI workflow that:
 - Applies `latest` **only on the default branch** (not feature branches or tags)
 - Supports **manual triggering** with a push toggle (useful for dry-run builds)
 - Uses **GHA layer cache** to speed up repeat builds
+- Validates Docker builds on **pull requests** (every PR) with optional push to GHCR via `publish-docker` label
 
 ---
 
@@ -161,7 +163,9 @@ workflow and builds the Docker image. The build serves as a validation check —
 fails fast if the Dockerfile is broken, even without pushing anything.
 
 The image is only pushed when the `publish-docker` label is present on the PR at
-the time the run starts. This is checked via:
+the time the run starts. On PR builds, `type=ref,event=branch` does not fire — `docker/metadata-action` filters tags by event type, so `event=branch` only activates on `push` events to branches. PR builds emit only the `pr-N` tag (plus no `datetime_sha`, which is suppressed by its `enable=` guard).
+
+This is checked via:
 
 ```yaml
 contains(github.event.pull_request.labels.*.name, 'publish-docker')
@@ -198,11 +202,19 @@ cache-to: type=gha,mode=max
 
 ### `workflow_dispatch` dry-run
 
-The `push` expression:
+The `push` expression in the `Build and push` step covers three event types:
+
 ```yaml
-push: ${{ github.event_name != 'workflow_dispatch' || inputs.push }}
+push: >-
+  ${{
+    github.event_name == 'push' ||
+    (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'publish-docker')) ||
+    (github.event_name == 'workflow_dispatch' && inputs.push)
+  }}
 ```
-- On `push` / tag events: always pushes (expression evaluates `true`)
+
+- On `push` / tag events: always pushes
+- On `pull_request` events: pushes only when the `publish-docker` label is present (see the PR builds section above)
 - On manual dispatch with `push: false`: builds but does not push (useful for testing the build)
 
 ### Permissions
