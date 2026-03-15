@@ -218,6 +218,30 @@ push: >-
 - On `pull_request` events: pushes only when the `publish-docker` label is present (see the PR builds section above)
 - On manual dispatch with `push: false`: builds but does not push (useful for testing the build)
 
+### Security: `env:` block for context variables in `run:` scripts
+
+GitHub's [security hardening guide](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable)
+warns against interpolating `${{ context }}` values directly inside `run:` shell scripts.
+Even seemingly safe values like `github.sha` can be used for script injection if an attacker
+controls a value that ends up in the context.
+
+The `Build image list` step follows this pattern — all GHA context values are passed through
+the `env:` block, never interpolated directly into the shell:
+
+```yaml
+- name: Build image list
+  env:
+    GHCR_IMAGE: ${{ env.GHCR_IMAGE }}
+    EXTERNAL_REGISTRY_URL: ${{ vars.EXTERNAL_REGISTRY_URL }}
+    EXTERNAL_REGISTRY_IMAGE: ${{ vars.EXTERNAL_REGISTRY_IMAGE }}
+  run: |
+    IMAGES="${GHCR_IMAGE}"   # safe: reads from env var, not ${{ }}
+    ...
+```
+
+The `Get commit info` step uses only `git` commands with no GHA context variables, so
+no `env:` block is needed there.
+
 ### Permissions
 
 ```yaml
