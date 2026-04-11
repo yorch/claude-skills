@@ -13,8 +13,8 @@ Skills are structured instruction sets that help Claude perform specific, comple
 
 | Skill                                                               | Description                                                                                                                                                                              |
 | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [app-docker-deploy-with-traefik](./app-docker-deploy-with-traefik/) | Generate Docker and Traefik deployment configuration for any application (Node.js, Python, Go, etc). Creates Dockerfile, docker-compose.yml, Traefik overlay, and environment templates. |
-| [code-changes-review](./code-changes-review/)                       | Comprehensive code review of uncommitted git changes. Analyzes for bugs, security issues, best practices, DRY violations, code smells, and performance problems.                         |
+| [app-docker-deploy-with-traefik](./skills/app-docker-deploy-with-traefik/) | Generate Docker and Traefik deployment configuration for any application (Node.js, Python, Go, etc). Creates Dockerfile, docker-compose.yml, Traefik overlay, and environment templates. |
+| [code-changes-review](./skills/code-changes-review/)                       | Comprehensive code review of uncommitted git changes. Analyzes for bugs, security issues, best practices, DRY violations, code smells, and performance problems.                         |
 
 ## Usage
 

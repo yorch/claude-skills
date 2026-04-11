@@ -14,11 +14,12 @@ The documentation for Claude Skills can be found at <https://code.claude.com/doc
 claude-skills/
 ├── README.md                          # Project overview
 ├── LICENSE                            # MIT License
-└── <skill-name>/                      # Each skill is a directory
-    ├── SKILL.md                       # Main instructions (frontmatter + workflow)
-    ├── templates/                     # Reusable file templates
-    ├── scripts/                       # Helper utilities
-    └── *.md                           # Supporting documentation
+└── skills/                            # All skills live here
+    └── <skill-name>/                  # Each skill is a directory
+        ├── SKILL.md                   # Main instructions (frontmatter + workflow)
+        ├── templates/                 # Reusable file templates
+        ├── scripts/                   # Helper utilities
+        └── *.md                       # Supporting documentation
 ```
 
 ### Skill Structure
@@ -47,13 +48,13 @@ Generates Docker + Traefik deployment configurations for any application type.
 
 ```bash
 # Generate htpasswd hash for basic auth
-./app-docker-deploy-with-traefik/scripts/generate-htpasswd.sh admin mypassword
+./skills/app-docker-deploy-with-traefik/scripts/generate-htpasswd.sh admin mypassword
 
 # Validate compose files
-python app-docker-deploy-with-traefik/scripts/validate-compose.py docker-compose.yml
+python skills/app-docker-deploy-with-traefik/scripts/validate-compose.py docker-compose.yml
 
 # Check/create traefik network
-./app-docker-deploy-with-traefik/scripts/check-network.sh --create
+./skills/app-docker-deploy-with-traefik/scripts/check-network.sh --create
 ```
 
 **Validation script requires:** `pip install pyyaml`
@@ -81,13 +82,13 @@ Performs comprehensive code review of uncommitted changes in a git repository.
 
 **Supporting files:**
 
-- [CHECKLIST.md](./code-changes-review/CHECKLIST.md) - Detailed review criteria with examples
+- [CHECKLIST.md](./skills/code-changes-review/CHECKLIST.md) - Detailed review criteria with examples
 
 ## Creating New Skills
 
 When adding a new skill:
 
-1. Create a directory with a descriptive kebab-case name
+1. Create a directory under `skills/` with a descriptive kebab-case name
 2. Add SKILL.md with YAML frontmatter:
 
    ```yaml
