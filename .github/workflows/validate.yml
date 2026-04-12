@@ -1,0 +1,40 @@
+name: Validate Plugin Structure
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check plugin manifest exists
+        run: test -f .claude-plugin/plugin.json
+
+      - name: Validate plugin manifest JSON
+        run: python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"
+
+      - name: Check each skill has SKILL.md
+        run: |
+          for dir in skills/*/; do
+            skill=$(basename "$dir")
+            if [ ! -f "$dir/SKILL.md" ]; then
+              echo "MISSING: $dir/SKILL.md"
+              exit 1
+            fi
+            echo "OK: $skill"
+          done
+
+      - name: Check SKILL.md files have frontmatter
+        run: |
+          for f in skills/*/SKILL.md; do
+            if ! head -1 "$f" | grep -q "^---$"; then
+              echo "MISSING frontmatter: $f"
+              exit 1
+            fi
+            echo "OK: $f"
+          done

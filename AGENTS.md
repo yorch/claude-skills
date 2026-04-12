@@ -22,6 +22,16 @@ claude-skills/
         └── *.md                       # Supporting documentation
 ```
 
+## Plugin
+
+This repository is a Claude Code plugin. The plugin manifest is at `.claude-plugin/plugin.json`. Skills in `skills/` are auto-discovered by Claude Code — no explicit registration needed.
+
+A GitHub Actions workflow at `.github/workflows/validate.yml` runs on every push and PR to `main`. It checks:
+
+- `.claude-plugin/plugin.json` exists and is valid JSON
+- Every directory under `skills/` contains a `SKILL.md`
+- Every `SKILL.md` starts with YAML frontmatter (`---`)
+
 ### Skill Structure
 
 Each skill follows this pattern:
@@ -88,7 +98,13 @@ Performs comprehensive code review of uncommitted changes in a git repository.
 
 When adding a new skill:
 
-1. Create a directory under `skills/` with a descriptive kebab-case name
+1. Create a directory under `skills/` with a descriptive kebab-case name, then add a temporary symlink for local development:
+
+   ```bash
+   ln -s "$(pwd)/skills/<skill-name>" ~/.claude/skills/<skill-name>
+   ```
+
+   Remove the symlink once you reinstall the plugin (`/plugin install claude-skills@yorch`).
 2. Add SKILL.md with YAML frontmatter:
 
    ```yaml

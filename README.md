@@ -11,14 +11,21 @@ Skills are structured instruction sets that help Claude perform specific, comple
 
 ## Available Skills
 
-| Skill                                                               | Description                                                                                                                                                                              |
-| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skill                                                                      | Description                                                                                                                                                                              |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [app-docker-deploy-with-traefik](./skills/app-docker-deploy-with-traefik/) | Generate Docker and Traefik deployment configuration for any application (Node.js, Python, Go, etc). Creates Dockerfile, docker-compose.yml, Traefik overlay, and environment templates. |
 | [code-changes-review](./skills/code-changes-review/)                       | Comprehensive code review of uncommitted git changes. Analyzes for bugs, security issues, best practices, DRY violations, code smells, and performance problems.                         |
 
-## Usage
+## Installation
 
-These skills are designed to be used with Claude in your development workflow. Reference the skill directory when asking Claude to perform a related task, and it will follow the structured instructions to deliver consistent, production-ready results.
+Add the marketplace and install the plugin in Claude Code:
+
+```text
+/plugin marketplace add yorch/claude-skills
+/plugin install claude-skills@yorch
+```
+
+Skills activate automatically based on context — no manual invocation needed.
 
 ## Contributing
 
