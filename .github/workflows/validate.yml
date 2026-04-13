@@ -18,6 +18,12 @@ jobs:
       - name: Validate plugin manifest JSON
         run: python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"
 
+      - name: Check marketplace manifest exists
+        run: test -f .claude-plugin/marketplace.json
+
+      - name: Validate marketplace manifest JSON
+        run: python3 -c "import json; json.load(open('.claude-plugin/marketplace.json'))"
+
       - name: Check each skill has SKILL.md
         run: |
           for dir in skills/*/; do
