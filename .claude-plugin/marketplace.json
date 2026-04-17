@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "claude-plugins-brnby",
+  "name": "brnby",
   "owner": {
     "name": "Jorge Barnaby",
     "url": "https://github.com/yorch"
