@@ -1,5 +1,5 @@
 {
-  "name": "claude-skills",
+  "name": "brnby-skills",
   "version": "1.0.0",
   "description": "A collection of reusable skills for common development tasks — Docker/Traefik deployments, code review, Rails, TypeScript, Prisma, and GitHub Actions.",
   "author": {
