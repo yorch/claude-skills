@@ -2,7 +2,8 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "claude-plugins-brnby",
   "owner": {
-    "name": "Jorge Barnaby"
+    "name": "Jorge Barnaby",
+    "url": "https://github.com/yorch"
   },
   "metadata": {
     "description": "Claude Code skills by Jorge Barnaby",
@@ -11,8 +12,8 @@
   "plugins": [
     {
       "name": "brnby-skills",
-      "source": "./",
-      "description": "A collection of reusable skills for common development tasks — Docker/Traefik deployments, code review, Rails, TypeScript, Prisma, and GitHub Actions."
+      "description": "A collection of reusable skills for common development tasks — Docker/Traefik deployments, code review, Rails, TypeScript, Prisma, and GitHub Actions.",
+      "source": "./"
     }
   ]
 }
