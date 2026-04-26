@@ -2,6 +2,8 @@
 
 This file provides guidance to AI Agents when working with code in this repository.
 
+> `CLAUDE.md` is a symlink to `AGENTS.md`, so any changes here will be reflected in both files.
+
 ## Repository Overview
 
 This is a collection of reusable Claude AI skills - structured instruction sets that help Claude perform specific, complex tasks consistently. Each skill is a self-contained directory with documentation, templates, and helper scripts.
