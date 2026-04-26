@@ -1,0 +1,69 @@
+{
+  "skill_name": "postgres-18-docker-volume",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Here's my docker-compose.yml for a new project:\n\n```yaml\nservices:\n  db:\n    image: postgres:18-alpine\n    environment:\n      POSTGRES_DB: myapp\n      POSTGRES_USER: myuser\n      POSTGRES_PASSWORD: secret\n    volumes:\n      - ./data/postgres:/var/lib/postgresql/data\n    healthcheck:\n      test: ['CMD-SHELL', 'pg_isready -U myuser']\n      interval: 10s\n      timeout: 5s\n      retries: 5\n    networks:\n      - app-network\n```\n\nIs this correct?",
+      "expected_output": "Should identify that the volume mount target /var/lib/postgresql/data is WRONG for postgres:18-alpine, explain the PG18 VOLUME declaration change, and provide the corrected mount path /var/lib/postgresql",
+      "assertions": [
+        {
+          "name": "identifies-wrong-mount-path",
+          "text": "The response clearly identifies that /var/lib/postgresql/data is the wrong mount target for postgres:18-alpine"
+        },
+        {
+          "name": "provides-correct-path",
+          "text": "The response provides the correct mount path: /var/lib/postgresql (without /data)"
+        },
+        {
+          "name": "explains-silent-data-loss",
+          "text": "The response explains or warns about the silent data loss risk (anonymous volumes, data not going to bind mount)"
+        },
+        {
+          "name": "explains-pg18-change",
+          "text": "The response explains that PostgreSQL 18 changed its VOLUME declaration"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "I'm upgrading my app from postgres:17-alpine to postgres:18-alpine. My current compose file has:\n\n```yaml\n  postgres:\n    image: postgres:17-alpine\n    volumes:\n      - ./data/postgres:/var/lib/postgresql/data\n```\n\nI just changed the image tag to postgres:18-alpine. Anything else I need to update?",
+      "expected_output": "Should warn about two things: 1) the volume path needs to change from /var/lib/postgresql/data to /var/lib/postgresql for PG18, and 2) the user cannot just remount existing data — they need to pg_dump/pg_restore because PG18 uses a new on-disk format",
+      "assertions": [
+        {
+          "name": "flags-volume-path-change",
+          "text": "The response identifies that the volume path must change for postgres:18-alpine"
+        },
+        {
+          "name": "warns-about-data-migration",
+          "text": "The response warns that existing PG17 data cannot be used directly by PG18 — a pg_dump/pg_restore is required"
+        },
+        {
+          "name": "provides-migration-steps",
+          "text": "The response provides concrete steps (pg_dumpall or pg_dump, then restore into fresh PG18)"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "My database keeps losing all its data every time I restart my containers. Here's the postgres service:\n\n```yaml\n  postgres:\n    image: postgres:18\n    restart: unless-stopped\n    environment:\n      - POSTGRES_DB=appdb\n      - POSTGRES_USER=appuser\n      - POSTGRES_PASSWORD=changeme\n    volumes:\n      - postgres_data:/var/lib/postgresql/data\n    healthcheck:\n      test: [\"CMD-SHELL\", \"pg_isready -U appuser\"]\n      interval: 10s\n      timeout: 5s\n      retries: 5\n\nvolumes:\n  postgres_data:\n```\n\nWhy does data disappear?",
+      "expected_output": "Should identify that the named volume postgres_data is mounted to /var/lib/postgresql/data but PG18's VOLUME is declared at /var/lib/postgresql. Docker creates an anonymous volume at the real data path, so data goes to the anonymous volume, not postgres_data. Fix: change the mount target to /var/lib/postgresql",
+      "assertions": [
+        {
+          "name": "identifies-root-cause",
+          "text": "The response correctly identifies that the volume target /var/lib/postgresql/data is wrong for postgres:18, causing data to go to an anonymous volume"
+        },
+        {
+          "name": "provides-correct-fix",
+          "text": "The response provides the fix: change postgres_data volume mount to /var/lib/postgresql"
+        },
+        {
+          "name": "explains-mechanism",
+          "text": "The response explains WHY data disappears — Docker VOLUME declaration vs bind/named mount path mismatch"
+        }
+      ],
+      "files": []
+    }
+  ]
+}
