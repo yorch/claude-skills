@@ -25,6 +25,7 @@ date: 2026-03-15
 ## When to Use This Skill
 
 Use this pattern when you need a CI workflow that:
+
 - Pushes Docker images to **GHCR** (and optionally a second registry)
 - Tags images with a **datetime+sha** slug for traceability and rollback
 - Applies `latest` **only on the default branch** (not feature branches or tags)
@@ -148,13 +149,13 @@ jobs:
 
 ### Tags Generated
 
-| Tag pattern | Example | When applied |
-|---|---|---|
-| `pr-N` | `pr-42` | PR events only — human-readable, identifies the PR |
-| `datetime_sha` | `202603151430_a1b2c3d` | push and tag events — chronological + traceable |
-| Branch name | `main` | branch push events (not tag push events) — human-readable current ref |
-| `latest` | `latest` | Only on the default branch (`main`) |
-| Tag ref | `v1.2.3` | Only when pushing a `v*` git tag |
+| Tag pattern    | Example                | When applied                                                          |
+| -------------- | ---------------------- | --------------------------------------------------------------------- |
+| `pr-N`         | `pr-42`                | PR events only — human-readable, identifies the PR                    |
+| `datetime_sha` | `202603151430_a1b2c3d` | push and tag events — chronological + traceable                       |
+| Branch name    | `main`                 | branch push events (not tag push events) — human-readable current ref |
+| `latest`       | `latest`               | Only on the default branch (`main`)                                   |
+| Tag ref        | `v1.2.3`               | Only when pushing a `v*` git tag                                      |
 
 The `datetime_sha` format is important: it lets you sort images chronologically in the registry UI and trace back to an exact commit without needing semver versioning.
 
@@ -165,17 +166,21 @@ The `datetime_sha` format is important: it lets you sort images chronologically 
 The naive alternatives both fail:
 
 **❌ `|| ''` (blank line in tags block)**
+
 ```yaml
 tags: |
   ghcr.io/org/app:${{ steps.tag.outputs.version }}
   ${{ github.event_name == 'push' && 'ghcr.io/org/app:latest' || '' }}
 ```
+
 A blank line is passed as an empty tag reference, causing `invalid reference format` errors in `docker/build-push-action` (version-dependent but unreliable).
 
 **❌ `|| null`**
+
 ```yaml
 ${{ github.event_name == 'push' && 'ghcr.io/org/app:latest' || null }}
 ```
+
 GHA expressions have no true `null` type. Depending on context, `null` coerces to the literal string `"null"`, which the action attempts to push as a tag named `null`.
 
 `metadata-action` avoids both pitfalls — the `enable=` option suppresses a tag entry entirely, producing no output line at all.
@@ -209,6 +214,7 @@ this restriction for contributors so they know why labeling a fork PR will not p
 ### Dual-registry support (optional)
 
 The external registry is entirely opt-in via repository variables and secrets:
+
 - `vars.EXTERNAL_REGISTRY_URL` — e.g., `registry.example.com` or `docker.io`
 - `vars.EXTERNAL_REGISTRY_IMAGE` — image name on that registry (defaults to `my-app`)
 - `secrets.EXTERNAL_REGISTRY_USERNAME` / `EXTERNAL_REGISTRY_PASSWORD`
@@ -296,12 +302,15 @@ permissions:
 ## Customization Points
 
 **Multi-platform builds** — replace `platforms: linux/amd64` with:
+
 ```yaml
 platforms: linux/amd64,linux/arm64
 ```
+
 Note: multi-platform builds cannot use GHA cache in `mode=max` for all layers; consider `type=registry` cache instead.
 
 **Build args** — add to the `Build and push` step:
+
 ```yaml
 build-args: |
   APP_VERSION=${{ steps.commit.outputs.datetime }}_${{ steps.commit.outputs.sha }}

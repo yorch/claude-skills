@@ -46,33 +46,37 @@ Force a `boolean` result with `!!` before the `&&`:
 
 ```tsx
 // ❌ FAILS — wd.entry_time is unknown
-{wd.entry_time && (
-  <DetailField value={String(wd.entry_time)} />
-)}
+{
+  wd.entry_time && <DetailField value={String(wd.entry_time)} />;
+}
 
 // ✅ WORKS — !!wd.entry_time is boolean
-{!!wd.entry_time && (
-  <DetailField value={String(wd.entry_time)} />
-)}
+{
+  !!wd.entry_time && <DetailField value={String(wd.entry_time)} />;
+}
 
 // Also works with null check
-{wd.entry_time != null && (
-  <DetailField value={String(wd.entry_time)} />
-)}
+{
+  wd.entry_time != null && <DetailField value={String(wd.entry_time)} />;
+}
 ```
 
 For chained `&&`:
 
 ```tsx
 // ❌ FAILS — first && returns unknown
-{wd.needs_reentry && wd.reentry_date && (
-  <DetailField value={String(wd.reentry_date)} />
-)}
+{
+  wd.needs_reentry && wd.reentry_date && (
+    <DetailField value={String(wd.reentry_date)} />
+  );
+}
 
 // ✅ WORKS — both forced to boolean
-{!!wd.needs_reentry && !!wd.reentry_date && (
-  <DetailField value={String(wd.reentry_date)} />
-)}
+{
+  !!wd.needs_reentry && !!wd.reentry_date && (
+    <DetailField value={String(wd.reentry_date)} />
+  );
+}
 ```
 
 ## Verification

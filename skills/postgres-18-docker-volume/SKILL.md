@@ -46,9 +46,9 @@ This applies to **both bind mounts and named volumes** — the target path insid
 determines where Docker routes the data.
 
 | Postgres version | Correct volume target (bind mount or named volume) |
-|---|---|
-| 15, 16, 17 | `/var/lib/postgresql/data` |
-| 18+ | `/var/lib/postgresql` |
+| ---------------- | -------------------------------------------------- |
+| 15, 16, 17       | `/var/lib/postgresql/data`                         |
+| 18+              | `/var/lib/postgresql`                              |
 
 **For postgres:18-alpine and postgres:18:**
 
@@ -92,6 +92,7 @@ docker inspect postgres:17-alpine | jq '.[0].Config.Volumes'
 ```
 
 If Docker is not available, check the Dockerfile on Docker Hub:
+
 - For postgres:18+, search for `VOLUME /var/lib/postgresql` (no `/data` suffix)
 
 ## Reviewing a docker-compose file

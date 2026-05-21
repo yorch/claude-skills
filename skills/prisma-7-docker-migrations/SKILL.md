@@ -50,18 +50,19 @@ The URL now lives in `prisma.config.ts`:
 
 ```typescript
 // packages/server/prisma.config.ts
-import { defineConfig, env } from 'prisma/config'
+import { defineConfig, env } from "prisma/config";
 
 export default defineConfig({
-  schema: 'prisma/schema.prisma',
-  migrations: { path: 'prisma/migrations' },
-  datasource: { url: env('DATABASE_URL') },
-})
+  schema: "prisma/schema.prisma",
+  migrations: { path: "prisma/migrations" },
+  datasource: { url: env("DATABASE_URL") },
+});
 ```
 
 ### Root Cause 2: Prisma 7 CLI has a large non-bundled dependency closure
 
 Prisma 7 CLI requires at runtime (beyond `prisma` and `@prisma`):
+
 - `effect`
 - `fast-check`
 - `pure-rand`
@@ -74,7 +75,7 @@ Selective copying of `node_modules/prisma` + `node_modules/@prisma` misses these
 
 In Yarn 4 node-modules linker, `.bin/prisma` is a symlink to
 `../prisma/build/index.js` (relative path). Docker `COPY` follows the symlink and
-copies the **file content** to the destination, preserving `__dirname` as the *source*
+copies the **file content** to the destination, preserving `__dirname` as the _source_
 directory — not the destination. This breaks WASM loading which is relative to `__dirname`.
 
 ## Solution
