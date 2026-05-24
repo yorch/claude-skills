@@ -20,6 +20,7 @@ Skills are structured instruction sets that help Claude perform specific, comple
 | [prisma-7-docker-migrations](./skills/prisma-7-docker-migrations/)                     | Run Prisma 7 migrations inside a multi-stage Docker production image, fixing MODULE_NOT_FOUND and missing DATABASE_URL errors at container startup.                                       |
 | [rails-auto-assigned-field-validation](./skills/rails-auto-assigned-field-validation/) | Fix Rails models where `validates :field, presence: true` silently breaks creates when the field is set by a `before_create` callback.                                                   |
 | [react-app-review](./skills/react-app-review/)                                         | Thorough React/Next.js code review: simplify components, extract hooks, fix state/effect anti-patterns, improve accessibility, and produce an incremental refactor roadmap.               |
+| [repo-wiki-generator](./skills/repo-wiki-generator/)                                   | Generate a DeepWiki-style structured wiki for any git repo: overview, per-subsystem pages, Mermaid architecture diagrams, and commit-pinned source citations. Uses parallel subagents.    |
 | [typescript-unknown-jsx-expression](./skills/typescript-unknown-jsx-expression/)       | Fix TypeScript "Type 'unknown' is not assignable to type ReactNode" errors in JSX `&&` short-circuit expressions using `Record<string, unknown>` values.                                 |
 
 ## Installation
