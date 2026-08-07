@@ -1,2 +1,8 @@
 # AI
 .claude/settings.local.json
+
+# cross-harness-delegation run artifacts and worktrees
+.delegates/
+
+# scratch
+tmp/
