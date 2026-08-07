@@ -42,7 +42,10 @@ work a subagent handles fine.
 - **Never relay a delegate's claim as fact.** Check cited `path:line` references
   against the real file before passing a finding to the user.
 - **Read-only means enforced by the tool, not requested in the prompt.**
-  `crush` and `aider` have no read-only mode and are never used for review.
+  `crush` and `aider` have no read-only mode and are hard-excluded from review.
+  `opencode` sits in between — its restriction is agent config, not a sandbox,
+  so `delegate.sh` allows it but prints a warning. Prefer `codex`, `gemini`, or
+  `pi` for review whenever the choice is free.
 - **Confirm before spending someone else's quota.** Build and fan-out runs are
   billed to another provider that this session cannot see or account for.
 - **Never merge without showing the diff.** Integration is the user's decision.
@@ -71,7 +74,17 @@ radii and different billing profiles.
 ### 2. Route
 
 ```bash
-skills/cross-harness-delegation/scripts/delegate.sh list
+"$CLAUDE_PLUGIN_ROOT"/skills/cross-harness-delegation/scripts/delegate.sh list
+```
+
+The skill runs inside the **user's** target repo, not inside this plugin, so
+always invoke the script by its absolute plugin path. A relative
+`./scripts/delegate.sh` will not resolve. If `$CLAUDE_PLUGIN_ROOT` is unset,
+locate the script under the installed plugin directory and use that path. The
+snippets below abbreviate it as `$DELEGATE`:
+
+```bash
+DELEGATE="$CLAUDE_PLUGIN_ROOT/skills/cross-harness-delegation/scripts/delegate.sh"
 ```
 
 Filter to installed × mode-eligible, then choose on capability
@@ -110,10 +123,10 @@ common cause of a useless result.
 
 ```bash
 # review — in place, read-only
-./scripts/delegate.sh run --harness codex --mode review --prompt-file prompt.md
+"$DELEGATE" run --harness codex --mode review --prompt-file prompt.md
 
 # build — worktree isolated
-./scripts/delegate.sh run --harness codex --mode build \
+"$DELEGATE" run --harness codex --mode build \
     --prompt-file prompt.md --task-id refactor-auth
 ```
 
@@ -124,8 +137,14 @@ coordination protocol is needed.
 ### 6. Verify — mandatory
 
 ```bash
-./scripts/delegate.sh collect <task-id>
+"$DELEGATE" collect <task-id>
 ```
+
+**`collect` is mandatory before `clean`, and it is what makes the work durable.**
+The prompt contract tells delegates not to commit, so a build worktree normally
+holds uncommitted output while the branch still points at base. `collect` stages
+and commits that onto `delegate/<task-id>`. Skipping it and running `clean` would
+delete the only copy — so `clean` refuses when the worktree is dirty.
 
 Then, without exception:
 
@@ -146,11 +165,15 @@ observed failure, not a hypothetical — see the `aider` self-update case in
 Present the verified diff and let the user decide. Then:
 
 ```bash
-./scripts/delegate.sh clean <task-id>   # removes worktree, KEEPS the branch
-git branch -D delegate/<task-id>        # separate, explicit discard
+"$DELEGATE" collect <task-id>         # commits the work onto the branch
+"$DELEGATE" clean   <task-id>         # removes worktree, KEEPS the branch
+git branch -D delegate/<task-id>      # separate, explicit discard
 ```
 
-Cleanup never destroys delegate output. Discarding is always a distinct step.
+Cleanup never destroys delegate output — provided `collect` ran first, which
+`clean` enforces by refusing on a dirty worktree. `clean <id> --force` overrides
+that and *does* discard uncommitted work; use it only to throw a run away.
+Discarding the branch is always a distinct, explicit step.
 
 ## Artifacts
 

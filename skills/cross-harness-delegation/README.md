@@ -54,15 +54,22 @@ summary is testimony, and verification is not optional.
 ## Quick start
 
 ```bash
+# the script runs against YOUR repo, so invoke it by its plugin path
+DELEGATE="$CLAUDE_PLUGIN_ROOT/skills/cross-harness-delegation/scripts/delegate.sh"
+
 # what's installed, and which modes each supports
-skills/cross-harness-delegation/scripts/delegate.sh list
+"$DELEGATE" list
 
 # second opinion, read-only, in place
-./scripts/delegate.sh run --harness codex --mode review --prompt-file prompt.md
+"$DELEGATE" run --harness codex --mode review --prompt-file prompt.md
 
 # isolated build, then inspect
-./scripts/delegate.sh run --harness codex --mode build \
+"$DELEGATE" run --harness codex --mode build \
     --prompt-file prompt.md --task-id refactor-auth
-./scripts/delegate.sh collect refactor-auth
-./scripts/delegate.sh clean   refactor-auth   # removes worktree, keeps branch
+"$DELEGATE" collect refactor-auth   # commits the work onto delegate/refactor-auth
+"$DELEGATE" clean   refactor-auth   # removes worktree, keeps branch
 ```
+
+`collect` before `clean` is required, not stylistic: delegates are told not to
+commit, so `collect` is what moves their output onto the branch. `clean` refuses
+on a dirty worktree rather than silently discarding it.

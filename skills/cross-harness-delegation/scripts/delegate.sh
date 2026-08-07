@@ -46,6 +46,12 @@ known_harness() {
   case " $HARNESSES " in *" $1 "*) return 0 ;; *) return 1 ;; esac
 }
 
+# Escape backslashes and double quotes so a path or task-id containing either
+# cannot produce invalid JSON in meta.json -- the script's only state store.
+json_escape() {
+  printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
+}
+
 # ---------------------------------------------------------------- list
 
 cmd_list() {
@@ -69,13 +75,21 @@ cmd_run() {
   harness=""; mode=""; prompt_file=""; task_id=""; base="HEAD"; model=""
   while [ $# -gt 0 ]; do
     case "$1" in
-      --harness)     harness=$2; shift 2 ;;
-      --mode)        mode=$2; shift 2 ;;
-      --prompt-file) prompt_file=$2; shift 2 ;;
-      --task-id)     task_id=$2; shift 2 ;;
-      --base)        base=$2; shift 2 ;;
-      --model)       model=$2; shift 2 ;;
-      *)             die "unknown flag: $1" ;;
+      --harness|--mode|--prompt-file|--task-id|--base|--model)
+        # Guard the value explicitly: under `set -u` a trailing flag would
+        # otherwise abort with "$2: unbound variable" and exit 1, which the
+        # documented contract reserves for a harness failure.
+        [ $# -ge 2 ] || die "missing value for $1"
+        case "$1" in
+          --harness)     harness=$2 ;;
+          --mode)        mode=$2 ;;
+          --prompt-file) prompt_file=$2 ;;
+          --task-id)     task_id=$2 ;;
+          --base)        base=$2 ;;
+          --model)       model=$2 ;;
+        esac
+        shift 2 ;;
+      *) die "unknown flag: $1" ;;
     esac
   done
 
@@ -92,7 +106,13 @@ cmd_run() {
         die "$harness has no read-only enforcement and is ineligible for review mode"
       fi
       if [ -z "$task_id" ]; then
-        task_id="review-$(date +%Y%m%d-%H%M%S)-$harness"
+        # $$ disambiguates fan-out: date has 1s resolution, and two backgrounded
+        # reviews of the same harness can easily start within the same second.
+        task_id="review-$(date +%Y%m%d-%H%M%S)-$$-$harness"
+      fi
+      if [ "$(review_tier "$harness")" = configured ]; then
+        printf 'delegate: WARNING: %s read-only is agent-config level, not sandbox-enforced.\n' "$harness" >&2
+        printf 'delegate: it runs in the live tree (%s) and could write. Prefer codex/gemini/pi.\n' "$PWD" >&2
       fi
       ;;
     build)
@@ -103,12 +123,11 @@ cmd_run() {
 
   root=$(repo_root)
   run_dir="$root/.delegates/runs/$task_id"
-  mkdir -p "$run_dir"
-  cp "$prompt_file" "$run_dir/prompt.md"
-  prompt=$(cat "$run_dir/prompt.md")
-  result_file="$run_dir/result.txt"
-  : >"$result_file"
 
+  # Validate EVERYTHING that can fail before creating or touching any artifact.
+  # Otherwise an aborted re-run (e.g. duplicate task-id) truncates the previous
+  # run's result.txt and overwrites its prompt.md before failing -- destroying a
+  # prior delegate's output via a command that ultimately did nothing.
   if [ "$mode" = build ]; then
     wt="$root/.delegates/worktrees/$task_id"
     branch="delegate/$task_id"
@@ -117,11 +136,24 @@ cmd_run() {
     fi
     base_sha=$(git -C "$root" rev-parse "$base" 2>/dev/null) ||
       die "cannot resolve base ref: $base"
+  else
+    base_sha=$(git -C "$root" rev-parse HEAD 2>/dev/null || echo "")
+  fi
+  if [ -e "$run_dir" ]; then
+    die "run artifacts already exist for task-id '$task_id'; pick another or remove $run_dir"
+  fi
+
+  mkdir -p "$run_dir"
+  cp "$prompt_file" "$run_dir/prompt.md"
+  prompt=$(cat "$run_dir/prompt.md")
+  result_file="$run_dir/result.txt"
+  : >"$result_file"
+
+  if [ "$mode" = build ]; then
     git -C "$root" worktree add -b "$branch" "$wt" "$base_sha" >/dev/null ||
       die "failed to create worktree at $wt"
     workdir="$wt"
   else
-    base_sha=$(git -C "$root" rev-parse HEAD 2>/dev/null || echo "")
     workdir="$PWD"
   fi
 
@@ -135,7 +167,10 @@ cmd_run() {
     # gemini: without --skip-trust it silently downgrades --approval-mode to
     # "default" ("folder is not trusted") and then blocks on approval prompts.
     gemini:review)   set -- gemini --skip-trust --approval-mode plan ;;
-    gemini:build)    set -- gemini --skip-trust --approval-mode auto_edit ;;
+    # auto_edit auto-approves edit tools ONLY -- shell/tool calls still prompt,
+    # which deadlocks headlessly. Build briefs are required to run tests, so
+    # yolo is the only workable setting. Safe here: build is worktree-isolated.
+    gemini:build)    set -- gemini --skip-trust --approval-mode yolo ;;
     # pi review allowlists read-only tools. `bash` is deliberately excluded:
     # a shell is a write primitive.
     pi:review)       set -- pi -p -t read,grep,find,ls ;;
@@ -184,12 +219,12 @@ cmd_run() {
 
   cat >"$run_dir/meta.json" <<EOF
 {
-  "task_id": "$task_id",
-  "harness": "$harness",
-  "mode": "$mode",
-  "model": "$model",
-  "base_sha": "$base_sha",
-  "workdir": "$workdir",
+  "task_id": "$(json_escape "$task_id")",
+  "harness": "$(json_escape "$harness")",
+  "mode": "$(json_escape "$mode")",
+  "model": "$(json_escape "$model")",
+  "base_sha": "$(json_escape "$base_sha")",
+  "workdir": "$(json_escape "$workdir")",
   "exit_code": $rc
 }
 EOF
@@ -215,38 +250,71 @@ cmd_collect() {
   mode=$(json_field "$run_dir/meta.json" mode)
   wt="$root/.delegates/worktrees/$task_id"
 
-  if [ "$mode" = build ] && [ -d "$wt" ]; then
-    # Stage everything so uncommitted AND untracked delegate output land in the
-    # diff. The worktree is disposable, so mutating its index is harmless.
-    git -C "$wt" add -A
-    git -C "$wt" diff --cached "$base_sha" >"$run_dir/diff.patch"
-    commits=$(git -C "$wt" rev-list --count "$base_sha"..HEAD 2>/dev/null || echo 0)
-    files=$(git -C "$wt" diff --cached --name-only "$base_sha" | wc -l | tr -d ' ')
-    printf 'task:    %s\n' "$task_id"
-    printf 'harness: %s\n' "$(json_field "$run_dir/meta.json" harness)"
-    printf 'commits: %s\n' "$commits"
-    printf 'files:   %s\n' "$files"
+  harness=$(json_field "$run_dir/meta.json" harness)
+
+  if [ "$mode" != build ]; then
+    printf 'task:    %s (review)\n' "$task_id"
+    printf 'harness: %s\n' "$harness"
+    printf 'result:  %s\n' "$run_dir/result.txt"
+    return 0
+  fi
+
+  # Build mode. If the worktree is already cleaned, the saved patch is all that
+  # is left -- say so plainly rather than silently printing a review summary.
+  if [ ! -d "$wt" ]; then
+    printf 'task:    %s (build -- worktree already cleaned)\n' "$task_id"
+    printf 'harness: %s\n' "$harness"
     printf 'branch:  delegate/%s\n' "$task_id"
     printf 'diff:    %s\n' "$run_dir/diff.patch"
-    printf 'result:  %s   <- a CLAIM, not evidence\n' "$run_dir/result.txt"
-    printf '\nchanged files:\n'
-    git -C "$wt" diff --cached --name-status "$base_sha"
-  else
-    printf 'task:    %s (review)\n' "$task_id"
-    printf 'harness: %s\n' "$(json_field "$run_dir/meta.json" harness)"
-    printf 'result:  %s\n' "$run_dir/result.txt"
+    printf '\nThe worktree is gone; the diff above is the surviving evidence.\n'
+    return 0
   fi
+
+  # Stage everything so uncommitted AND untracked delegate output are captured.
+  # Then COMMIT it onto the branch: the prompt contract tells delegates not to
+  # commit, so without this the branch would stay pinned at base and `clean`
+  # would destroy the work while claiming to keep it.
+  git -C "$wt" add -A
+  if ! git -C "$wt" diff --cached --quiet; then
+    git -C "$wt" \
+      -c user.email=delegate@local -c user.name="delegate ($harness)" \
+      commit -q -m "delegate output: $task_id ($harness)
+
+Auto-committed by delegate.sh collect so the work survives cleanup.
+Not reviewed. Squash or drop before merging."
+  fi
+
+  git -C "$wt" diff "$base_sha" HEAD >"$run_dir/diff.patch"
+  commits=$(git -C "$wt" rev-list --count "$base_sha"..HEAD 2>/dev/null || echo 0)
+  files=$(git -C "$wt" diff --name-only "$base_sha" HEAD | wc -l | tr -d ' ')
+  printf 'task:    %s\n' "$task_id"
+  printf 'harness: %s\n' "$harness"
+  printf 'commits: %s\n' "$commits"
+  printf 'files:   %s\n' "$files"
+  printf 'branch:  delegate/%s\n' "$task_id"
+  printf 'diff:    %s\n' "$run_dir/diff.patch"
+  printf 'result:  %s   <- a CLAIM, not evidence\n' "$run_dir/result.txt"
+  printf '\nchanged files:\n'
+  git -C "$wt" diff --name-status "$base_sha" HEAD
 }
 
 # ---------------------------------------------------------------- clean
 
 cmd_clean() {
   task_id=${1:-}; [ -n "$task_id" ] || die "usage: delegate.sh clean <task-id>"
+  force=${2:-}
   root=$(repo_root)
   wt="$root/.delegates/worktrees/$task_id"
   if [ ! -d "$wt" ]; then
     printf 'no worktree for %s\n' "$task_id"
     return 0
+  fi
+
+  # Refuse to discard work that was never committed to the branch. Removing the
+  # worktree deletes the working tree, so uncommitted output would be lost while
+  # the "kept" branch stayed empty. `collect` is what commits it.
+  if [ -n "$(git -C "$wt" status --porcelain 2>/dev/null)" ] && [ "$force" != --force ]; then
+    die "worktree $task_id has uncommitted delegate output; run 'delegate.sh collect $task_id' first (or 'clean $task_id --force' to discard it)"
   fi
   # Worktree removal is known to fail on non-empty dirs and on repos with
   # submodules; fall back to a manual rm plus prune.

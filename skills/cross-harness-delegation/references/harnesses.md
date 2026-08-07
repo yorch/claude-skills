@@ -1,9 +1,13 @@
 # Harness registry
 
-Every flag below was read from the installed binary's `--help` and then
-**confirmed by an actual headless run** on 2026-08-06. Rows are re-verifiable in
-seconds — prefer re-running `delegate.sh list` and a probe over trusting this
-file if a harness has been upgraded.
+Every flag below was read from the installed binary's `--help` on 2026-08-06.
+**`pi`, `opencode`, `codex`, `crush`, and `aider` were additionally confirmed by
+an actual headless run.** The `gemini` rows are verified as *parsed correctly*
+only — a full run is blocked by an upstream `IneligibleTierError` on this
+machine, so treat them as unproven until auth is restored.
+
+Rows are re-verifiable in seconds — prefer re-running `delegate.sh list` and a
+probe over trusting this file if a harness has been upgraded.
 
 Routing is decided on *verified capability*, never on quality claims like
 "harness X is better at refactoring". Capability claims can be falsified with a
@@ -34,7 +38,7 @@ would be a *request in the prompt*, not a guarantee from the tool.
 | Harness | review | build |
 |---|---|---|
 | `codex` | `codex exec -s read-only -o <result>` | `codex exec -s workspace-write -o <result>` |
-| `gemini` | `gemini --skip-trust --approval-mode plan -p <prompt>` | `gemini --skip-trust --approval-mode auto_edit -p <prompt>` |
+| `gemini` | `gemini --skip-trust --approval-mode plan -p <prompt>` | `gemini --skip-trust --approval-mode yolo -p <prompt>` |
 | `pi` | `pi -p -t read,grep,find,ls` | `pi -p` |
 | `opencode` | `opencode run --agent plan` | `opencode run --auto` |
 | `crush` | — ineligible — | `crush run --quiet` |
@@ -67,6 +71,15 @@ Running `gemini --approval-mode plan` in an untrusted folder prints
 and proceeds with approval prompts — which then hang or fail headlessly. The
 requested mode is dropped, not honored. `--skip-trust` is required for the
 approval mode to take effect at all.
+
+### `gemini --approval-mode auto_edit` is not enough for build
+
+`auto_edit` auto-approves **edit tools only**. Shell and other tool calls still
+require approval, and with stdin closed a headless run deadlocks or aborts the
+moment the delegate tries to run the build or test command — which the prompt
+contract requires every build brief to specify. `yolo` is the only workable
+setting for headless build. It is acceptable here precisely because build mode is
+worktree-isolated; never use it for review.
 
 ### `crush --yolo` does not work with `run`
 
