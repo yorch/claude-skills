@@ -27,6 +27,7 @@ For each finding: realistic attack scenario + exploitability + remediation. No t
 - **Severity scale**: `P0` critical (exploitable vulnerability, secret exposure, data loss) · `P1` high (likely exploitable, weak auth pattern) · `P2` medium (hardening gap) · `P3` low (defense-in-depth polish).
 - **Confidence tag**: `[confirmed]` (verified in code) or `[suspected]` (needs human verification).
 - **Fixability tag**: `[auto-fix]` (non-breaking patch bump of a vulnerable dep, adding a security header, parameterizing an obviously injectable query) · `[fix-with-approval]` (anything touching auth flows, sessions, CORS behavior, breaking dep upgrades, or secret rotation) · `[needs-input]` (depends on deployment environment or threat model only the user knows) · `[report-only]` (architectural security work).
+- **Output budget.** Report every `P0`/`P1`. Cap `P2` and `P3` at 10 rows each and stop at 40 rows total. If you omit anything, end your section with an explicit `omitted: N P2, M P3 (budget)` line — never truncate silently.
 - **You cannot talk to the user.** Anything that requires their input goes into your Questions list for the orchestrator to relay.
 
 ## Output Format

@@ -29,6 +29,25 @@ Dispatch each one with `subagent_type: <agent-name>` (e.g. `subagent_type: secur
 - Fixability: `[auto-fix]` · `[fix-with-approval]` · `[needs-input]` · `[report-only]`. Required on every row from every agent, `EVOL-*` included.
 - Finding IDs are namespaced per agent: `PROD-*`, `ARCH-*`, `SEC-*`, `DOC-*`, `TEST-*`, `EVOL-*`.
 
+### Output budget (every agent)
+
+Six agents reporting into one orchestrator context is the scaling limit of this
+skill. Each agent bounds its own output:
+
+- **Every `P0`/`P1` (and `E1`) finding is always reported. Never truncate these.**
+- **`P2`/`P3` (and `E2`/`E3`): at most 10 rows each.** If there are more, report
+  the highest-impact 10 and state the count omitted.
+- **Hard ceiling of 40 findings rows per agent.** If a repo genuinely exceeds
+  that at P0/P1, say so — an agent that needs more than 40 critical rows is
+  reporting a systemic problem, and *that* is the finding.
+- **Truncation is never silent.** Any agent that omits rows ends its section with
+  an explicit line: `omitted: 14 P2, 31 P3 (budget)`. A capped report that reads
+  as exhaustive is worse than one that admits its limits.
+
+The orchestrator carries every omission count into `REPO_REVIEW.md` rather than
+dropping it during synthesis, so the reader can tell a clean dimension from a
+truncated one.
+
 **Never mix the two axes.** `E*` items are opportunities and constraints, not defects. They are excluded from the scorecard's `#P0`/`#P1` counts, from the consolidated P0/P1 findings list, and from the "fix all P0/P1" shortcut — an `EVOL` item reaches the remediator only if the user approves it individually. If an agent emits a `P*` severity outside its namespace, or an `EVOL` item arrives tagged `P0`, treat it as a reporting error and re-tag it rather than propagating it into the aggregates.
 
 ## Phase 0 — Recon (you)
@@ -39,7 +58,7 @@ Dispatch each one with `subagent_type: <agent-name>` (e.g. `subagent_type: secur
 
 ## Phase 1 — Parallel Review (delegate)
 
-Invoke these six subagents **in parallel**, passing each the Repo Brief verbatim plus any scope guidance:
+Invoke these six subagents **in parallel**, passing each the Repo Brief verbatim, any scope guidance, and the Output budget above:
 
 | Subagent | Dimension |
 | --- | --- |

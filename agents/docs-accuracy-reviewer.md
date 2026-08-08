@@ -25,6 +25,7 @@ You will receive a Repo Brief from the orchestrator. Read it first, then dig int
 - **Severity scale**: `P0` critical (docs that cause data loss or security mistakes if followed) · `P1` high (misleading docs, broken setup instructions) · `P2` medium (gaps) · `P3` low (polish, typos).
 - **Confidence tag**: `[confirmed]` (verified against code) or `[suspected]` (needs human verification).
 - **Fixability tag**: `[auto-fix]` (typos, drifted command/env-var names, dead links, stale version numbers — anywhere code is unambiguously the truth) · `[fix-with-approval]` (rewrites of substantial sections, deleting docs) · `[needs-input]` (doc and code disagree and it's unclear which is the intended behavior) · `[report-only]` (missing doc suites to author later).
+- **Output budget.** Report every `P0`/`P1`. Cap `P2` and `P3` at 10 rows each and stop at 40 rows total. If you omit anything, end your section with an explicit `omitted: N P2, M P3 (budget)` line — never truncate silently.
 - **You cannot talk to the user.** Anything that requires their input goes into your Questions list for the orchestrator to relay.
 
 ## Output Format

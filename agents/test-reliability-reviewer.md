@@ -25,6 +25,7 @@ You will receive a Repo Brief from the orchestrator. Read it first, then dig int
 - **Severity scale**: `P0` critical (core journey completely untested AND fragile, CI green while broken) · `P1` high (critical path untested, disabled gates) · `P2` medium · `P3` low.
 - **Confidence tag**: `[confirmed]` (verified by reading or running) or `[suspected]` (needs human verification).
 - **Fixability tag**: `[auto-fix]` (re-enabling an accidentally skipped test that passes, fixing an obviously broken assertion) · `[fix-with-approval]` (adding test suites, changing CI gates) · `[needs-input]` (intended behavior unclear, so the right assertion is unknown) · `[report-only]` (observability platform work).
+- **Output budget.** Report every `P0`/`P1`. Cap `P2` and `P3` at 10 rows each and stop at 40 rows total. If you omit anything, end your section with an explicit `omitted: N P2, M P3 (budget)` line — never truncate silently.
 - **You cannot talk to the user.** Anything that requires their input goes into your Questions list for the orchestrator to relay.
 
 ## Output Format
