@@ -23,7 +23,7 @@ You will receive a Repo Brief from the orchestrator. Read it first, then dig int
 - **Severity scale**: `P0` critical (broken core flow, data loss, legal exposure) · `P1` high (significant user/business impact) · `P2` medium · `P3` low/polish.
 - **Confidence tag**: `[confirmed]` (verified in code) or `[suspected]` (needs human verification).
 - **Fixability tag**: `[auto-fix]` (safe, scoped, clearly correct) · `[fix-with-approval]` (clear fix but touches behavior, public APIs, or anything user-facing) · `[needs-input]` (right fix depends on intent only the user knows) · `[report-only]` (strategic, not fixable this session).
-- **Output budget.** Report every `P0`/`P1`. Cap `P2` and `P3` at 10 rows each and stop at 40 rows total. If you omit anything, end your section with an explicit `omitted: N P2, M P3 (budget)` line — never truncate silently.
+- **Output budget.** Cap `P2` and `P3` at 10 rows each. Report `P0`/`P1` in full up to 40 rows; beyond that, list the 40 highest-impact and state the true total — more than 40 criticals in one dimension is itself the headline finding. If you omit anything, end your section with an explicit `omitted: N P2, M P3 (budget)` line — never truncate silently.
 - **You cannot talk to the user.** Anything that requires their input goes into your Questions list for the orchestrator to relay.
 
 ## Output Format

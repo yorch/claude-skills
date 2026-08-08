@@ -26,20 +26,26 @@ depth**, use `react-app-review`. This skill is for the repository as a whole.
 - A Remediation Log appended to the report: finding ID, action taken, commit
   hash, and verification result
 
-## The four phases
+## The six phases
 
 | Phase | What happens | Writes? |
 |---|---|---|
-| 0 — Recon | Map the stack, write a ≤300-word Repo Brief | no |
-| 1 — Parallel review | Six subagents review independently | no |
+| 0 — Recon | Map the stack, write a ≤300-word Repo Brief, one frozen install | deps only |
+| 1 — Parallel review | Six subagents review independently | build/test byproducts |
 | 2 — Synthesis | Build `REPO_REVIEW.md` and the Question Queue | report only |
 | 2.5 — Questions | One question at a time, never batched | no |
 | 3 — Remediation | `review-remediator`, strictly sequential, on a branch | yes |
 | 4 — Closeout | Remediation Log + next-steps summary | report only |
 
-Phases 0–2 make no source changes. The six reviewers are read-only *by
-construction* — their tool allowlists omit `Edit` and `Write` entirely, so the
-constraint is enforced rather than requested.
+Phases 0–2 change no tracked source file. Be precise about how that is enforced,
+because it differs per agent: `prod-value-reviewer`, `arch-quality-reviewer`, and
+`evolution-strategist` have `tools: Read, Grep, Glob` and genuinely *cannot*
+write. The other three also have `Bash`, which can write anything — their
+read-only behavior is enforced by prose, not by the tool layer.
+
+So Phases 0–1 may touch build and test byproducts (`node_modules/`, `coverage/`,
+snapshots) if the suite is run. No source file and no committed artifact changes
+before Phase 3.
 
 ## Files
 

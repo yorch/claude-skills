@@ -19,7 +19,14 @@ You are the **Review Orchestrator**. Delegate deep analysis to the specialist su
 
 Dispatch each one with `subagent_type: <agent-name>` (e.g. `subagent_type: security-reviewer`). The agents live at the plugin root, not in the target repo's `.claude/agents/` — read `agents/<name>.md` there if you need an agent's full contract.
 
-**Phases 0–2 make no changes to source code.** The only write is the `REPO_REVIEW.md` report itself. The reviewer subagents are read-only by construction — their tool allowlists omit `Edit` and `Write` entirely. All source edits happen in Phase 3, on a dedicated branch.
+**Phases 0–2 make no changes to source code.** All source edits happen in Phase 3, on a dedicated branch.
+
+Be precise about how strongly that is enforced, because it differs per agent:
+
+- **`prod-value-reviewer`, `arch-quality-reviewer`, `evolution-strategist`** have `tools: Read, Grep, Glob`. They *cannot* write — the constraint is enforced by the tool layer.
+- **`security-reviewer`, `docs-accuracy-reviewer`, `test-reliability-reviewer`** additionally have `Bash`, which can write anything. Their read-only behavior is enforced by prose, not by the tool layer, and is therefore weaker.
+
+Phase 1 can therefore touch **build and test byproducts** — `node_modules/`, `coverage/`, `.pytest_cache/`, test snapshots and databases — if the test suite is run. It never edits tracked source. Do not promise a user an untouched working tree; promise that no source file and no committed artifact changes before Phase 3.
 
 ## Shared Vocabulary (used across all agents — keep synthesis consistent)
 
@@ -34,15 +41,19 @@ Dispatch each one with `subagent_type: <agent-name>` (e.g. `subagent_type: secur
 Six agents reporting into one orchestrator context is the scaling limit of this
 skill. Each agent bounds its own output:
 
-- **Every `P0`/`P1` (and `E1`) finding is always reported. Never truncate these.**
 - **`P2`/`P3` (and `E2`/`E3`): at most 10 rows each.** If there are more, report
   the highest-impact 10 and state the count omitted.
-- **Hard ceiling of 40 findings rows per agent.** If a repo genuinely exceeds
-  that at P0/P1, say so — an agent that needs more than 40 critical rows is
-  reporting a systemic problem, and *that* is the finding.
+- **`P0`/`P1` (and `E1`) are reported in full, up to 40 rows.** Beyond 40
+  criticals, list the 40 highest-impact and state the true total — a repo with
+  more than 40 critical findings in one dimension has a systemic problem, and
+  *that* is the headline finding, not the 41st row.
 - **Truncation is never silent.** Any agent that omits rows ends its section with
   an explicit line: `omitted: 14 P2, 31 P3 (budget)`. A capped report that reads
   as exhaustive is worse than one that admits its limits.
+
+Note the caps are per-tier and deliberately not a single total: since `P2` and
+`P3` can never exceed 20 rows between them, an overall "40 rows" ceiling could
+only ever bind on the critical findings you must not drop.
 
 The orchestrator carries every omission count into `REPO_REVIEW.md` rather than
 dropping it during synthesis, so the reader can tell a clean dimension from a
@@ -55,6 +66,13 @@ truncated one.
 1. Map the repo: stack, frameworks, package manager, monorepo vs. single app, entry points, docs/test/CI/infra locations.
 2. Write a compact **Repo Brief** (≤300 words): what the product appears to be, who the user appears to be, architecture in one paragraph, pointers to key directories.
 3. If the repo is large (>~2k files), add scope guidance to the Brief: prioritize entry points, core domain modules, auth/payment/data layers, and anything touched in the last 90 days of git history.
+4. **Prepare the environment ONCE, here, before any fan-out.** If the test suite needs dependencies installed, run a single frozen-lockfile install now and record in the Brief whether it succeeded.
+
+   Use exactly one, matching the lockfile present: `npm ci` · `yarn install --immutable` · `pnpm install --frozen-lockfile` · `bun install --frozen-lockfile` · `uv sync --frozen` · `poetry sync` (Poetry ≥2; `poetry install --sync` on 1.x) · `bundle config set --local frozen true && bundle install`. Never a bare `npm install` / `yarn install` / `pnpm install` — those rewrite the lockfile.
+
+   This must happen in Phase 0 because Phase 1 runs **in parallel**: `npm ci` deletes and recreates `node_modules` wholesale, so an install racing `security-reviewer`'s `npm audit` or `test-reliability-reviewer`'s own suite run produces `MODULE_NOT_FOUND` failures that an agent cannot distinguish from a real defect — and a spurious P0/P1 then flows into the scorecard and the "fix all P0/P1" shortcut. Installing once, sequentially, before dispatch removes the race entirely.
+
+   If no frozen install is available for this repo, say so in the Brief. Reviewers must then report the suite as unrunnable rather than installing anything themselves.
 
 ## Phase 1 — Parallel Review (delegate)
 
@@ -96,15 +114,21 @@ Then build the **Question Queue**: deduplicate and merge all agents' questions p
 ## Phase 3 — Remediation (you + `review-remediator`, sequential)
 
 - Create branch `review/remediation-<date>` first. Never commit to the default branch.
-- Fix: all `[auto-fix]` findings; all `[fix-with-approval]` findings the user approved; all `[needs-input]` findings whose answers made the fix unambiguous.
-- Order: P0 → P1 → P2; within a severity: security → correctness → docs → polish. Skip P3 unless asked.
+- **Commit `REPO_REVIEW.md` onto that branch as its first commit**, before dispatching any remediator. Phase 2 writes the report into the working tree while still on the default branch, and no remediator will ever stage it — `review-remediator` is forbidden from touching anything outside its work order. Left uncommitted, the skill's primary deliverable is an untracked file: absent from the branch anyone pulls, and destroyed by any `git clean -fd`.
+- Fix, at **P0–P2 only**: all `[auto-fix]` findings; all `[fix-with-approval]` findings the user approved; all `[needs-input]` findings whose answers made the fix unambiguous.
+- Order: P0 → P1 → P2; within a severity: security → correctness → docs → polish.
+- **P3 is skipped unless the user asks — including P3 `[auto-fix]` findings.** Severity gates before fixability; the two rules are not independent. Without this precedence a review that surfaces 30 P3 `[auto-fix]` doc typos is ambiguous: "fix all `[auto-fix]`" and "skip P3" give opposite answers, and behavior varies run to run. If the user does ask for P3, batch **all** P3 auto-fixes into a **single** commit rather than one per finding — thirty one-line commits is not what "minimal diffs" means.
 - Delegate implementation to `review-remediator` with a complete work order per finding (ID, evidence, agreed remediation, user decisions, branch). Run work orders **strictly sequentially — one remediator at a time.**
 
-  Disjoint file sets are **not** sufficient to make remediators concurrent. Each one runs `git add`/`git commit` against the *same branch and the same index*, so two in flight either collide on `.git/index.lock` or sweep each other's staged changes into one commit — producing a commit whose contents don't match the finding recorded in the Phase 4 log. Sequencing is also required on its own terms: the severity order below is meaningless if fixes land concurrently.
+  Disjoint file sets are **not** sufficient to make remediators concurrent. Each one runs `git add`/`git commit` against the *same branch and the same index*, so two in flight either collide on `.git/index.lock` or sweep each other's staged changes into one commit — producing a commit whose contents don't match the finding recorded in the Phase 4 log. Sequencing is also required on its own terms: the P0 -> P1 -> P2 severity order above is meaningless if fixes land concurrently.
 
   If remediation ever needs to be parallelized, isolation must be at the *branch* level, not the file level: give each remediator its own `git worktree` on its own branch and merge the results afterwards. Do not attempt this on a shared branch.
 - If the remediator escalates (riskier than assessed) → one question to the user, same protocol as Phase 2.5. If a fix fails verification → record `[fix-failed]`, continue.
 
 ## Phase 4 — Closeout
 
-Update `REPO_REVIEW.md` with a **Remediation Log**: finding ID | action (fixed / approved-and-fixed / declined / fix-failed / deferred) | commit hash | verification result. Final message to the user: branch name, fixed vs. deferred counts, any `[fix-failed]`, and the top 3 items the team should pick up next.
+Update `REPO_REVIEW.md` with a **Remediation Log**: finding ID | action (fixed / approved-and-fixed / declined / fix-failed / deferred) | commit hash | verification result. Carry forward any `omitted: … (budget)` counts from Phase 1 so a truncated dimension is never mistaken for a clean one.
+
+**Commit the updated report** as the final commit on the remediation branch, so the branch you hand over actually contains it.
+
+Final message to the user: branch name, fixed vs. deferred counts, any `[fix-failed]`, and the top 3 items the team should pick up next.

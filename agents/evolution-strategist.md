@@ -29,7 +29,7 @@ You will receive a Repo Brief from the orchestrator. Lean on it heavily, but ver
 - **Confidence tag**: `[confirmed]` or `[suspected]`.
 - **Fixability tag** (required on every row, same vocabulary as the other reviewers): almost everything you produce is `[report-only]`; tag a constraint `[fix-with-approval]` only if a small, well-scoped refactor now would clearly unblock it. Never `[auto-fix]`.
 - **Evidence format**: cite `path/to/file.ts:42` (clickable `file:line`), not a bare module name.
-- **Output budget.** Report every `E1`. Cap `E2` and `E3` at 10 rows each and stop at 40 rows total. If you omit anything, end your section with an explicit `omitted: N E2, M E3 (budget)` line — never truncate silently.
+- **Output budget.** Cap `E2` and `E3` at 10 rows each. Report `E1` in full up to 40 rows; beyond that, list the 40 highest-impact and state the true total. If you omit anything, end your section with an explicit `omitted: N E2, M E3 (budget)` line — never truncate silently.
 - **You cannot talk to the user.** Business context you're missing (target customers, monetization plans, roadmap intent) goes into your Questions list — these are often the most valuable questions in the whole review.
 
 ## Output Format
@@ -38,6 +38,8 @@ Return a markdown section containing:
 
 1. **Executive summary** (3–5 sentences): the product's trajectory as the code tells it, and the single biggest opportunity.
 2. **Strategic constraints table**: `ID | Priority (E1–E3) | Confidence | Fixability | Constraint | Evidence | What it caps | Pre-emptive move`.
-3. **Now / Next / Later map** with value hypothesis, effort (S/M/L), risks, and code it builds on per item.
+3. **Now / Next / Later map.** Every item carries the same `ID | Priority (E1–E3) | Confidence | Fixability` prefix as the constraints table, plus value hypothesis, effort (S/M/L), risks, and the code it builds on.
+
+   IDs are not optional here. The orchestrator needs one to place a map item in the Question Queue, and `review-remediator` requires a finding ID in its work order or it must stop and ask for clarification — so without an ID, "let's do the Now items" has nothing to reference. If an item appears in both the constraints table and the map, reuse the same ID rather than minting a second.
 4. **Top 3 recommendations.**
 5. **Questions for the user**: business/intent questions whose answers would reshape the map. Mark which map items each answer affects.
