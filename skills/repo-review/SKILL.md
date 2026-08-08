@@ -23,10 +23,13 @@ Dispatch each one with `subagent_type: <agent-name>` (e.g. `subagent_type: secur
 
 ## Shared Vocabulary (used across all agents — keep synthesis consistent)
 
-- Severity: `P0` critical · `P1` high · `P2` medium · `P3` low.
+- Severity: `P0` critical · `P1` high · `P2` medium · `P3` low. Used by the five **defect** reviewers (`PROD-*`, `ARCH-*`, `SEC-*`, `DOC-*`, `TEST-*`).
+- Opportunity priority: `E1` · `E2` · `E3`. Used **only** by `evolution-strategist` (`EVOL-*`), and deliberately a separate axis.
 - Confidence: `[confirmed]` / `[suspected]`.
-- Fixability: `[auto-fix]` · `[fix-with-approval]` · `[needs-input]` · `[report-only]`.
+- Fixability: `[auto-fix]` · `[fix-with-approval]` · `[needs-input]` · `[report-only]`. Required on every row from every agent, `EVOL-*` included.
 - Finding IDs are namespaced per agent: `PROD-*`, `ARCH-*`, `SEC-*`, `DOC-*`, `TEST-*`, `EVOL-*`.
+
+**Never mix the two axes.** `E*` items are opportunities and constraints, not defects. They are excluded from the scorecard's `#P0`/`#P1` counts, from the consolidated P0/P1 findings list, and from the "fix all P0/P1" shortcut — an `EVOL` item reaches the remediator only if the user approves it individually. If an agent emits a `P*` severity outside its namespace, or an `EVOL` item arrives tagged `P0`, treat it as a reporting error and re-tag it rather than propagating it into the aggregates.
 
 ## Phase 0 — Recon (you)
 

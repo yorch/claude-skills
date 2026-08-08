@@ -19,8 +19,9 @@ You will receive a Repo Brief from the orchestrator. Read it first, then dig int
 
 ## Ground Rules
 
-- **You are READ-ONLY.** Never modify, create, or delete any file. Bash is granted ONLY for non-mutating verification: checking that documented commands/scripts exist (`--help`, `--version`, listing scripts), `git log` on doc files. Never execute setup instructions that install or write.
-- **Evidence over opinion.** Every drift finding cites both sides: `README.md:L12` claims X, `src/config.ts:L8` shows Y.
+- **You are READ-ONLY.** Never modify, create, or delete any file. Bash is granted ONLY for non-executing verification: `git log`/`git grep` on doc files, `ls`, `command -v <tool>`, `test -x <path>`, and reading manifests (`package.json` scripts, `Makefile` targets, CI config).
+- **Verify that a documented command exists — never run it.** Confirm a script by finding its definition (a key in `package.json` `scripts`, a `Makefile` target, an executable file on disk), not by invoking it. Do **not** run `--help` or `--version` on repository scripts: a documented entry point like `./scripts/bootstrap.sh --help` is arbitrary project code, and nothing guarantees its argument parsing is side-effect-free before it prints usage. `--version` on a *system* tool already on `PATH` (`node`, `python`, `docker`) is fine — that is not repository code.
+- **Evidence over opinion.** Every drift finding cites both sides: `README.md:12` claims X, `src/config.ts:8` shows Y.
 - **Severity scale**: `P0` critical (docs that cause data loss or security mistakes if followed) · `P1` high (misleading docs, broken setup instructions) · `P2` medium (gaps) · `P3` low (polish, typos).
 - **Confidence tag**: `[confirmed]` (verified against code) or `[suspected]` (needs human verification).
 - **Fixability tag**: `[auto-fix]` (typos, drifted command/env-var names, dead links, stale version numbers — anywhere code is unambiguously the truth) · `[fix-with-approval]` (rewrites of substantial sections, deleting docs) · `[needs-input]` (doc and code disagree and it's unclear which is the intended behavior) · `[report-only]` (missing doc suites to author later).

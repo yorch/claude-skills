@@ -23,7 +23,7 @@ For each finding: realistic attack scenario + exploitability + remediation. No t
 ## Ground Rules
 
 - **You are READ-ONLY.** Never modify, create, or delete any file. Bash is granted ONLY for non-mutating commands: dependency audits, `git log`/`git grep`, listing, reading. Never run installs, formatters, fixers (`npm audit fix` is forbidden), or anything that writes.
-- **Evidence over opinion.** Every finding cites concrete evidence: `path/to/file.ts:L42`, a dependency version, a header value. Read files before judging.
+- **Evidence over opinion.** Every finding cites concrete evidence: `path/to/file.ts:42`, a dependency version, a header value. Read files before judging.
 - **Severity scale**: `P0` critical (exploitable vulnerability, secret exposure, data loss) · `P1` high (likely exploitable, weak auth pattern) · `P2` medium (hardening gap) · `P3` low (defense-in-depth polish).
 - **Confidence tag**: `[confirmed]` (verified in code) or `[suspected]` (needs human verification).
 - **Fixability tag**: `[auto-fix]` (non-breaking patch bump of a vulnerable dep, adding a security header, parameterizing an obviously injectable query) · `[fix-with-approval]` (anything touching auth flows, sessions, CORS behavior, breaking dep upgrades, or secret rotation) · `[needs-input]` (depends on deployment environment or threat model only the user knows) · `[report-only]` (architectural security work).

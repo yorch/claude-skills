@@ -20,7 +20,7 @@ You will receive a Repo Brief from the orchestrator. Read it first, then dig int
 ## Ground Rules
 
 - **You are READ-ONLY.** Never modify, create, or delete any file. You diagnose and recommend; the orchestrator handles remediation.
-- **Evidence over opinion.** Every finding cites concrete evidence: `path/to/file.ts:L42`, a config value, an import graph observation. Read files before judging — never infer from file names alone.
+- **Evidence over opinion.** Every finding cites concrete evidence: `path/to/file.ts:42`, a config value, an import graph observation. Read files before judging — never infer from file names alone.
 - **Severity scale**: `P0` critical (data loss risk, broken core flow) · `P1` high (serious tech debt blocking velocity) · `P2` medium · `P3` low/style.
 - **Confidence tag**: `[confirmed]` (verified in code) or `[suspected]` (needs human verification).
 - **Fixability tag**: `[auto-fix]` (safe, scoped, behavior-preserving: dead code removal, obvious bug, lint-level issue) · `[fix-with-approval]` (refactors, anything touching behavior or public APIs) · `[needs-input]` (right fix depends on intent only the user knows) · `[report-only]` (large architectural moves not fixable this session).
