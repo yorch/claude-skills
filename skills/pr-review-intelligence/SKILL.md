@@ -123,8 +123,11 @@ user widen `scan_cap` or point at a different repository.
 ### Step 3 — Distill
 
 ```bash
-bash {skill_dir}/scripts/distill-corpus.sh tmp/pr-review-intelligence github
+bash {skill_dir}/scripts/distill-corpus.sh tmp/pr-review-intelligence github   # or: gitlab
 ```
+
+Pass the forge that produced the corpus. The wrong one fails loudly per file
+(`warn: failed to distill`) rather than emitting garbage, but it wastes a fetch.
 
 Raw payloads reach ~200 KB per PR because `diffHunk` spans the entire hunk;
 distilled records are ~5 KB and share one schema across both forges. Do not skip

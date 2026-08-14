@@ -47,6 +47,13 @@ for f in "$OUTDIR"/raw/*.json; do
   fi
 done
 
+if [ "$ok" -eq 0 ]; then
+  echo "error: every payload failed to distill (${failed} files)." >&2
+  echo "       The most likely cause is the wrong forge: this run used '${FORGE}'." >&2
+  echo "       Re-run with the forge that produced the corpus." >&2
+  exit 1
+fi
+
 # Flag any PR whose threads were silently truncated by pagination, so counts in
 # the final report are never derived from a partial fetch.
 truncated="$(jq -s '[.[] | select(.threads_total > .threads_fetched) | .number]' \
