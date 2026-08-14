@@ -161,7 +161,22 @@ Concatenate the batch outputs:
 ```bash
 cat tmp/pr-review-intelligence/observations/batch-*.jsonl \
   > tmp/pr-review-intelligence/observations.jsonl
+
+python3 {skill_dir}/scripts/validate-observations.py \
+  tmp/pr-review-intelligence/observations.jsonl
 ```
+
+The validator enforces the analyst output contract and prints frequency, adherence,
+and routing per exact-match cluster. It exits non-zero on contract violations —
+an invented category or a dropped field would otherwise corrupt aggregation
+silently. Fix or discard violating rows before continuing.
+
+Treat its cluster table as the **floor**, not the answer: it matches patterns
+exactly, so it under-counts frequency wherever two agents phrased the same pattern
+differently. Semantic clustering below can only merge rows and raise frequency,
+never lower it. If the validator warns that nothing cleared the evidence gate even
+before merging, the corpus is likely too small — consider a larger `count` before
+spending effort on synthesis.
 
 Read the combined file and cluster observations by their `pattern` field. Clustering
 is semantic, not string equality — "prefer the shared date helper over raw format()"
@@ -214,6 +229,7 @@ Verify before reporting completion:
 
 | Check | How |
 | --- | --- |
+| Observations satisfy the contract | `validate-observations.py` exits 0 |
 | Every rule cites ≥2 distinct PRs | Count citations per rule block |
 | Every citation link resolves to a real PR | Spot-check 3 against the corpus |
 | No fabricated code examples | Every block traces to a diff in `raw/` |

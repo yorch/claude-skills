@@ -52,7 +52,8 @@ In `docs/code-review/`:
   that silently corrupt the analysis
 - `references/TAXONOMY.md` — outcome classification, categories, scoring, gates
 - `references/TEMPLATES.md` — templates for the five output documents
-- `scripts/` — corpus fetch and distill for both forges, plus a GitLab fixture
+- `scripts/` — corpus fetch and distill for both forges, an observation-contract
+  validator that applies the routing gates by arithmetic, and a GitLab fixture
 
 ## Related
 
