@@ -95,7 +95,14 @@ Each returns findings, recommendations, and a Questions-for-the-user list. If an
 
 ## Phase 2 — Synthesis (you)
 
-Produce `REPO_REVIEW.md`:
+**First, check whether `REPO_REVIEW.md` already exists.** Re-reviewing a repo is a normal flow, and the previous report holds things this run cannot reconstruct: which findings the user declined, the answers they gave in Phase 2.5, and the Remediation Log tying findings to commits. Never overwrite it silently.
+
+- **Tracked and unmodified** → overwriting is safe, because git still has it. Record the prior report's commit SHA in the new report's header so the old one stays findable.
+- **Untracked, or tracked-but-modified** → its contents exist nowhere else. **Stop and ask** before writing: archive it to `REPO_REVIEW-<YYYY-MM-DD>.md` (recommended), or overwrite it. Do not decide this for the user.
+
+When a prior report is found, carry forward its declined findings into the new one as a "Previously declined" section, so a re-review doesn't re-litigate decisions the user already made.
+
+Then produce `REPO_REVIEW.md`:
 
 1. **Executive Summary** (≤1 page): health grade per dimension (Product, Architecture, Security, Docs, Testing) on A–F, the 5 most important findings overall, the single biggest opportunity.
 2. **Scorecard table**: dimension | grade | one-line justification | #P0 | #P1.
@@ -118,7 +125,15 @@ Then build the **Question Queue**: deduplicate and merge all agents' questions p
 
 ## Phase 3 — Remediation (you + `review-remediator`, sequential)
 
-- **Refuse to start Phase 3 on a dirty working tree.** If `git status --porcelain` is non-empty, stop and ask the user to commit or stash first (offer to stash). This is a hard precondition, not politeness: the remediator's failure-recovery is `git restore --staged --worktree`, which restores from `HEAD`. If the user had uncommitted edits in a file the remediator touches, that recovery silently destroys them — and working-tree content that was never committed has no reflog to recover from. A clean tree is what makes `HEAD` equal the pre-fix state.
+- **Refuse to start Phase 3 on a dirty working tree**, excluding this skill's own deliverable:
+
+  ```bash
+  git status --porcelain -- . ':!REPO_REVIEW.md' ':!REPO_REVIEW-*.md'
+  ```
+
+  If that is non-empty, stop and ask the user to commit or stash first (offer to stash). This is a hard precondition, not politeness: the remediator's failure-recovery is `git restore --staged --worktree`, which restores from `HEAD`. If the user had uncommitted edits in a file the remediator touches, that recovery silently destroys them — and working-tree content that was never committed has no reflog to recover from. A clean tree is what makes `HEAD` equal the pre-fix state.
+
+  **The exclusions are required, not cosmetic.** A bare `git status --porcelain` lists untracked files as `?? REPO_REVIEW.md`, and Phase 2 always writes that file — so an unexcluded check is non-empty on *every* run, first or repeat, and Phase 3 could never start at all.
 - Create branch `review/remediation-<date>` first. Never commit to the default branch. If that branch already exists — a same-day re-review is a normal flow — append `-2`, `-3`, … rather than failing or reusing it.
 - **Commit `REPO_REVIEW.md` onto that branch as its first commit**, before dispatching any remediator. Phase 2 writes the report into the working tree while still on the default branch, and no remediator will ever stage it — `review-remediator` is forbidden from touching anything outside its work order. Left uncommitted, the skill's primary deliverable is an untracked file: absent from the branch anyone pulls, and destroyed by any `git clean -fd`.
 - Fix, at **P0–P2**: all `[auto-fix]` findings; all `[fix-with-approval]` findings the user approved; all `[needs-input]` findings whose answers made the fix unambiguous.
