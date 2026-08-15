@@ -43,9 +43,14 @@ because it differs per agent: `prod-value-reviewer`, `arch-quality-reviewer`, an
 write. The other three also have `Bash`, which can write anything — their
 read-only behavior is enforced by prose, not by the tool layer.
 
-So Phases 0–1 may touch build and test byproducts (`node_modules/`, `coverage/`,
-snapshots) if the suite is run. No source file and no committed artifact changes
+So Phases 0–1 may touch **untracked** build and test byproducts (`node_modules/`,
+`coverage/`, scratch databases) if the suite is run. No *tracked* file changes
 before Phase 3.
+
+Snapshot files are the trap here: `__snapshots__/*.snap` is tracked, and test
+runners write new entries by default. Phase 1 therefore runs the suite in
+non-writing mode (`CI=true`, `--ci`), and reports it unrunnable rather than
+letting it dirty a committed file.
 
 ## Files
 
