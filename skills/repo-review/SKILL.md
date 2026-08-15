@@ -68,7 +68,22 @@ truncated one.
 1. Map the repo: stack, frameworks, package manager, monorepo vs. single app, entry points, docs/test/CI/infra locations.
 2. Write a compact **Repo Brief** (≤300 words): what the product appears to be, who the user appears to be, architecture in one paragraph, pointers to key directories.
 3. If the repo is large (>~2k files), add scope guidance to the Brief: prioritize entry points, core domain modules, auth/payment/data layers, and anything touched in the last 90 days of git history.
-4. **Prepare the environment ONCE, here, before any fan-out.** If the test suite needs dependencies installed, run a single frozen-lockfile install now and record in the Brief whether it succeeded.
+4. **Decide where the review runs. Default: in place, in the user's repo.**
+
+   Two independent axes, and conflating them is a design error:
+   - **Isolation** — in the user's tree, or in a throwaway `git worktree`.
+   - **Scope** — the working tree including uncommitted work, or `HEAD` only.
+
+   A worktree changes *both*: it is isolated **and** it is `HEAD`-only, because a worktree is created at a commit and contains **only tracked files**. That second consequence is what makes it a poor default:
+
+   - No `.env` or local config → the suite very likely fails → `test-reliability-reviewer` files a false P0/P1 against a suite that works fine for the user.
+   - No `node_modules` → a cold install on every review.
+   - **Submodules break worktree creation and removal.** Never offer a worktree if `.gitmodules` exists.
+   - A worktree nested under the repo can pick up the parent's tool config (mocha, jest, tsconfig), producing findings about the wrong configuration.
+
+   So: **offer** a worktree only when it would genuinely help — the tree is dirty *and* the suite will be run — and state the cost plainly. If the user takes it, downgrade every `TEST-*` finding that depends on running the suite to `[suspected]` and say why in the report. If the user wants `HEAD`-only *scope* without isolation, that is just `git stash` first; do not create a worktree for it.
+
+5. **Prepare the environment ONCE, here, before any fan-out.** If the test suite needs dependencies installed, run a single frozen-lockfile install now and record in the Brief whether it succeeded.
 
    Use exactly one, matching the lockfile present: `npm ci` · `yarn install --immutable` · `pnpm install --frozen-lockfile` · `bun install --frozen-lockfile` · `uv sync --frozen` · `poetry sync` (Poetry ≥2; `poetry install --sync` on 1.x) · `BUNDLE_FROZEN=true bundle install`. Never a bare `npm install` / `yarn install` / `pnpm install` — those rewrite the lockfile.
 
@@ -95,12 +110,19 @@ Each returns findings, recommendations, and a Questions-for-the-user list. If an
 
 ## Phase 2 — Synthesis (you)
 
-**First, check whether `REPO_REVIEW.md` already exists.** Re-reviewing a repo is a normal flow, and the previous report holds things this run cannot reconstruct: which findings the user declined, the answers they gave in Phase 2.5, and the Remediation Log tying findings to commits. Never overwrite it silently.
+**First, handle any existing `REPO_REVIEW.md`.** Re-reviewing is a normal flow, and a prior report is *input*, not just an obstacle: it holds what this run cannot reconstruct — which findings the user declined, the answers given in Phase 2.5, and the Remediation Log tying findings to commits. Never overwrite it silently.
 
-- **Tracked and unmodified** → overwriting is safe, because git still has it. Record the prior report's commit SHA in the new report's header so the old one stays findable.
-- **Untracked, or tracked-but-modified** → its contents exist nowhere else. **Stop and ask** before writing: archive it to `REPO_REVIEW-<YYYY-MM-DD>.md` (recommended), or overwrite it. Do not decide this for the user.
+**Validate it first.** Confirm it is actually this skill's output: a Scorecard table, a findings table with namespaced IDs (`SEC-*`, `ARCH-*`, …), and an Executive Summary. If those are absent, it is somebody else's file that happens to share the name — **do not touch it**. Write to `REPO_REVIEW-<YYYY-MM-DD>.md` instead and say so.
 
-When a prior report is found, carry forward its declined findings into the new one as a "Previously declined" section, so a re-review doesn't re-litigate decisions the user already made.
+If it validates, report what you found (its date, finding count, and how many its Remediation Log records as fixed) and offer:
+
+1. **Update** — re-verify each prior finding and report a delta: `fixed` · `still open` · `regressed` · `no longer applicable`. Best for a repo being actively improved; it answers "did our fixes stick?", which a fresh review cannot.
+2. **Fresh** — archive to `REPO_REVIEW-<prior-date>.md` and review clean.
+3. **Replace** — discard the prior report. Only offer this when it is tracked and unmodified, since git still has it; otherwise its contents exist nowhere else.
+
+**In every case, the Phase 1 reviewers are never shown the prior report.** Discovery must stay independent — an agent handed last month's findings tends to confirm them rather than look with fresh eyes, and a regression that reappeared somewhere new gets filed under the old location. Only the orchestrator reads it, in this phase, to compute the delta.
+
+Carry forward the prior report's declined findings as a **Previously declined** section under any option, so a re-review never re-litigates a decision the user already made.
 
 Then produce `REPO_REVIEW.md`:
 

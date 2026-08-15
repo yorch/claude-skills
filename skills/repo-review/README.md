@@ -30,9 +30,9 @@ depth**, use `react-app-review`. This skill is for the repository as a whole.
 
 | Phase | What happens | Writes? |
 |---|---|---|
-| 0 — Recon | Map the stack, write a ≤300-word Repo Brief, one frozen install | deps only |
+| 0 — Recon | Repo Brief, choose where to run, one frozen install | deps only |
 | 1 — Parallel review | Six subagents review independently | build/test byproducts |
-| 2 — Synthesis | Build `REPO_REVIEW.md` and the Question Queue | report only |
+| 2 — Synthesis | Handle any prior report, build `REPO_REVIEW.md` + Question Queue | report only |
 | 2.5 — Questions | One question at a time, never batched | no |
 | 3 — Remediation | `review-remediator`, strictly sequential, on a branch | yes |
 | 4 — Closeout | Remediation Log + next-steps summary | report only |
@@ -51,6 +51,26 @@ Snapshot files are the trap here: `__snapshots__/*.snap` is tracked, and test
 runners write new entries by default. Phase 1 therefore runs the suite in
 non-writing mode (`CI=true`, `--ci`), and reports it unrunnable rather than
 letting it dirty a committed file.
+
+## Where it runs, and re-reviewing
+
+**In your repo by default.** A throwaway worktree is offered only when it would
+genuinely help (dirty tree plus a suite that will run), and never on repos with
+submodules. The caveat is stated when offered: a worktree contains only *tracked*
+files, so no `.env`, no `node_modules`, and no local config — which makes the
+test suite fail for reasons that have nothing to do with the repo's health. Take
+the worktree and every suite-dependent `TEST-*` finding is downgraded to
+`[suspected]`.
+
+If you want `HEAD`-only *scope* rather than isolation, that is just `git stash`
+first — a different axis, and no worktree needed.
+
+**Re-reviews use the prior report.** An existing `REPO_REVIEW.md` is validated as
+genuinely this skill's output, then you choose: **update** (re-verify each prior
+finding and report fixed / still open / regressed / no longer applicable),
+**fresh** (archive the old, review clean), or **replace**. The Phase 1 reviewers
+are never shown the prior report under any option — handing an agent last month's
+findings makes it confirm them rather than look with fresh eyes.
 
 ## Files
 
