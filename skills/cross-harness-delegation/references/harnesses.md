@@ -78,8 +78,15 @@ approval mode to take effect at all.
 require approval, and with stdin closed a headless run deadlocks or aborts the
 moment the delegate tries to run the build or test command — which the prompt
 contract requires every build brief to specify. `yolo` is the only workable
-setting for headless build. It is acceptable here precisely because build mode is
-worktree-isolated; never use it for review.
+setting for headless build; never use it for review.
+
+**Be precise about what that costs.** A git worktree bounds *git state* — the
+branch, the index, what lands in the diff. It does **not** sandbox the
+filesystem. Under `yolo`, gemini can still run arbitrary commands that write
+outside the worktree entirely. That is materially weaker containment than
+`codex exec -s workspace-write`, which is an actual sandbox. Prefer `codex` for
+build tasks when the choice is free, and treat `gemini:build` as trusted-input
+only.
 
 ### `crush --yolo` does not work with `run`
 
