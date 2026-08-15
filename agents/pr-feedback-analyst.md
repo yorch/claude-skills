@@ -10,6 +10,8 @@ description: >
   invocation per batch of PRs. Should be dispatched many at once — each
   invocation is independent.
 tools: Read, Grep, Glob, Write, Bash
+model: sonnet
+effort: medium
 color: cyan
 ---
 
@@ -30,7 +32,7 @@ accuracy and faithfulness to the source threads, not synthesis.
   process, one absolute path per line
 - `output_path` — absolute path where you must write your JSONL observations
 - `skill_dir` — absolute path to the `pr-review-intelligence` skill; read
-  `references/TAXONOMY.md` from here
+  `references/CLASSIFICATION.md` from here
 - `repo_root` — absolute path to the target repository checkout, for verifying that
   a referenced file or helper still exists
 - `repo_slug` — e.g. `owner/repo`, used to build citation links
@@ -39,10 +41,11 @@ If any required input is missing, stop and report what's missing. Do not guess.
 
 ## What you must do
 
-1. **Read the taxonomy.** Open `{skill_dir}/references/TAXONOMY.md`. You need the
-   category list, the outcome definitions, and the language cues for the
-   author-confirms test. Use those categories verbatim — inventing a category breaks
-   downstream aggregation.
+1. **Read the classification reference.** Open
+   `{skill_dir}/references/CLASSIFICATION.md`. It carries the outcome definitions,
+   the language cues for the author-confirms test, and the category list. Use those
+   categories verbatim — inventing one breaks downstream aggregation. It is the only
+   reference you need; scoring and routing are the orchestrator's job, not yours.
 2. **Read each distilled PR file** listed in `batch_file`. These are compact
    forge-neutral records; you do not need to fetch anything from the network, and
    you must not try.

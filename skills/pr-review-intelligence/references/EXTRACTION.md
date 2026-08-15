@@ -243,7 +243,7 @@ Classify a thread as **addressed** when any of these hold:
 Classify as **declined** when the thread ends with the author deferring or pushing
 back and neither 1 nor 2 holds (*"out of scope"*, *"we can follow up"*,
 *"working as intended"*). Declined threads are the primary source of
-`do-not-flag.md` — see `TAXONOMY.md`.
+`do-not-flag.md` — see `SCORING.md`.
 
 ### Bot logins are inconsistent across fields
 

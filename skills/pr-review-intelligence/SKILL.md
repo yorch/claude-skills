@@ -139,15 +139,16 @@ and must be flagged in the report rather than presented as complete.
 
 ### Step 4 — Batch and fan out
 
-Split the distilled files into batches of **5 PRs**, writing one batch manifest
-per batch:
-
-```text
-tmp/pr-review-intelligence/batches/batch-01.txt   # 5 absolute paths, one per line
+```bash
+bash {skill_dir}/scripts/make-batches.sh tmp/pr-review-intelligence 5
 ```
 
-Dispatch one `pr-feedback-analyst` subagent per batch, **all in a single message**
-so they run concurrently. Each invocation gets:
+The script writes one manifest per batch and returns the manifest paths as JSON.
+Splitting files into batches is mechanical, so it does not belong in the
+orchestrator's context — the same reason the distill step is `jq`.
+
+Dispatch one `pr-feedback-analyst` subagent per manifest, **all in a single
+message** so they run concurrently. Each invocation gets:
 
 - `batch_file` — absolute path to its manifest
 - `output_path` — `tmp/pr-review-intelligence/observations/batch-NN.jsonl`
@@ -156,6 +157,10 @@ so they run concurrently. Each invocation gets:
 - `repo_slug` — `owner/name`
 
 Each agent returns the path it wrote. Six batches covers the default 30 PRs.
+
+The agent pins `model: sonnet` and `effort: medium` in its own frontmatter — see
+[Model tiering](#model-tiering) for why, and for the environment variable that
+overrides it.
 
 ### Step 5 — Aggregate and score
 
@@ -185,7 +190,7 @@ Read the combined file and cluster observations by their `pattern` field. Cluste
 is semantic, not string equality — "prefer the shared date helper over raw format()"
 and "don't call format() directly for display" are one pattern.
 
-For each cluster compute, per `references/TAXONOMY.md`:
+For each cluster compute, per `references/SCORING.md`:
 
 - **frequency** — distinct PRs, not threads. Two threads in one PR count once.
 - **adherence** — `addressed / (addressed + declined)`, ignoring `discussion` and `open`.
@@ -208,7 +213,7 @@ Follow `references/TEMPLATES.md` exactly. Write the provenance header first — 
 sample size and yield are what let a reader calibrate how much to trust the rest.
 
 Before writing each rule, check it against the quality bar in
-`references/TAXONOMY.md`: it must be checkable by a reviewer that sees a diff and
+`references/SCORING.md`: it must be checkable by a reviewer that sees a diff and
 can read the repo. Rewrite anything that needs runtime behavior or product context,
 or drop it.
 
@@ -225,6 +230,51 @@ Tell the user, concisely:
 - how many findings were routed to tooling rather than review
 - what the analysis could not see
 - the exact snippet to paste from `AGENTS-snippet.md`, and where
+
+## Model tiering
+
+Each stage runs on the cheapest thing that can do its job. The largest saving is
+not picking a smaller model — it is not calling a model at all, which is why
+distillation is `jq`, gating is Python, and batching is shell.
+
+| Stage | Nature | Runs on |
+| --- | --- | --- |
+| Census / fetch | shell + `gh`/`glab` | no model |
+| Distill | `jq` | no model |
+| Batch manifests | shell | no model |
+| **Thread mining** | bounded classification, fixed schema | **`sonnet`, `effort: medium`** |
+| Validate / gate | Python arithmetic | no model |
+| Cluster and score | semantic judgment | orchestrator (session model) |
+| Write documents | hardest judgment | orchestrator (session model) |
+
+The analyst pins `model: sonnet` and `effort: medium` in its frontmatter. It is a
+bounded extraction task against a fixed schema, so the top tier is not warranted —
+but it is not mechanical either, and the reason it is not pinned lower is specific:
+
+**Outcome classification has one genuinely hard case, and getting it wrong is the
+worst failure this skill can produce.** A thread where the reviewer raises a point,
+the author replies "out of scope", the reviewer pushes back, and the author then
+concedes is `addressed`, not `declined`. Misreading it inverts that pattern's
+adherence, which routes a real rule into `do-not-flag.md` — the skill would then
+actively suppress a legitimate finding. Suppression errors are worse than noise
+errors, because nobody sees what was silenced.
+
+If you want to try a cheaper tier, the honest way is to measure rather than assume:
+run the same corpus at two tiers and diff `evidence/observations.jsonl` on the
+`outcome` and `reversal` fields. Those two columns are where a cheaper model will
+fail first.
+
+**Overrides, in precedence order:** `CLAUDE_CODE_SUBAGENT_MODEL` (env var, wins over
+everything and forces *every* subagent in the session), then the per-invocation
+model, then this frontmatter, then the session model. A user who has set that
+variable will not get the pinned tier, which is expected — it is a deliberate
+session-wide cost ceiling.
+
+**Batch size is the other cost lever.** Each analyst re-reads the agent prompt and
+`CLASSIFICATION.md` (~12 KB) no matter how many PRs it handles, so larger batches
+amortize that fixed cost — at the price of less parallelism. `CLASSIFICATION.md`
+exists precisely to keep that repeated payload small: scoring, routing, and the
+evidence gate live in `SCORING.md`, which only the orchestrator reads.
 
 ## Quality gates
 

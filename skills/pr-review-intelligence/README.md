@@ -45,12 +45,25 @@ In `docs/code-review/`:
    an appendix. Low-adherence and bot-initiated clusters route to `do-not-flag.md`;
    mechanically checkable findings route to a suggested lint rule instead.
 
+## Cost
+
+Every stage runs on the cheapest thing that can do its job, and most stages run on
+no model at all — distillation is `jq`, gating is Python, batching is shell. The
+analyst subagent pins `model: sonnet` with `effort: medium`: a bounded extraction
+task against a fixed schema doesn't need the top tier, but outcome classification
+has one hard case (reviewer pushes back, author concedes) where a misread inverts
+adherence and silently suppresses a real rule. `CLAUDE_CODE_SUBAGENT_MODEL`
+overrides the pin session-wide. See SKILL.md § Model tiering.
+
 ## Files
 
 - `SKILL.md` — operating principles, inputs, seven-step workflow, quality gates
 - `references/EXTRACTION.md` — forge queries, field mapping, and the field traps
   that silently corrupt the analysis
-- `references/TAXONOMY.md` — outcome classification, categories, scoring, gates
+- `references/CLASSIFICATION.md` — outcome definitions, language cues, categories.
+  The analyst's only reference, kept small because it is re-read once per batch
+- `references/SCORING.md` — scoring, routing, evidence gate, rule quality bar.
+  Orchestrator-only; the analyst never reads it
 - `references/TEMPLATES.md` — templates for the five output documents
 - `scripts/` — corpus fetch and distill for both forges, an observation-contract
   validator that applies the routing gates by arithmetic, and a GitLab fixture
