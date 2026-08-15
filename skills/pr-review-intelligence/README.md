@@ -5,7 +5,8 @@ reviewers actually ask for, then generates review guidance backed by citations t
 the PRs where each point was raised. The output is **codified tribal knowledge** —
 if a rule would be true of any repository, it does not belong in the output.
 
-Works with GitHub (`gh`) and GitLab (`glab`). Read-only on source; the only files
+Works with GitHub and GitLab, including GitHub Enterprise and self-hosted GitLab
+(`gh` / `glab`). Read-only on source; the only files
 written are under the output directory and a disposable `tmp/` scratch directory.
 The output directory is claimed with a provenance marker on first run, and the
 skill refuses to overwrite a directory it did not create.
@@ -67,9 +68,9 @@ overrides the pin session-wide. See SKILL.md § Model tiering.
 - `references/SCORING.md` — scoring, routing, evidence gate, rule quality bar.
   Orchestrator-only; the analyst never reads it
 - `references/TEMPLATES.md` — templates for the five output documents
-- `scripts/` — corpus fetch and distill for both forges, batch manifests, an
-  output-directory guard, an observation-contract validator that applies the
-  routing gates by arithmetic, and a GitLab fixture
+- `scripts/` — host/forge resolution, corpus fetch and distill for both forges,
+  batch manifests, an output-directory guard, an observation-contract validator
+  that applies the routing gates by arithmetic, and a GitLab fixture
 
 ## Related
 
@@ -85,6 +86,13 @@ overrides the pin session-wide. See SKILL.md § Model tiering.
   documented REST shape and verified against a fixture. Two fields are weaker
   there and are labelled as approximations in output: change-request rounds
   (GitLab has no review object) and the outdated flag.
+- **Self-hosted instances resolve the host explicitly, and have not been run
+  against a live deployment.** `gh` and `glab` both silently fall back to their
+  public host when a hostname is neither passed nor inferable from the working
+  directory, which would mine an unrelated public repo of the same name — so the
+  host is resolved once and passed to every call, and an unauthenticated host
+  fails rather than falling back. On GitHub Enterprise, a low yield may mean the
+  instance's search index is incomplete rather than that the team doesn't review.
 - **Findings are only as good as the corpus.** A repository that reviews in chat,
   squashes without thread history, or rubber-stamps most PRs will yield thin
   results — the report states its own yield and warns when the sample is thin.

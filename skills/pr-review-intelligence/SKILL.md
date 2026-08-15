@@ -86,12 +86,25 @@ docs/review-intelligence/
 ### Step 1 — Resolve the target and check tooling
 
 ```bash
-git remote get-url origin
+bash {skill_dir}/scripts/resolve-target.sh
 ```
 
-Derive `owner/name` and the forge from the host. Confirm the CLI is present and
-authenticated (`gh auth status` or `glab auth status`). If authentication fails,
-stop and tell the user — every later step depends on it.
+Returns `{host, forge, path, project_encoded, is_public_host}` from the origin
+remote. **Carry `host` through every later step** — do not let `gh`/`glab` infer
+it. Both fall back to their public host whenever a hostname is neither passed nor
+inferable from the current directory, so an unqualified GitHub Enterprise or
+self-hosted GitLab run silently mines the *public* repository of the same name and
+returns a complete, plausible report from the wrong codebase.
+
+For a host that is not `github.com` or `gitlab.com`, the script probes both CLIs'
+authentication to decide the forge — a hostname like `git.acme.com` says nothing
+about which product is behind it. If neither CLI is authenticated there, or both
+are, it stops rather than guessing. Relay that message; do not fall back to a
+public host.
+
+If the user supplied a `repo` that differs from the current checkout, still resolve
+the host explicitly — that combination is exactly where the silent-wrong-repo
+failure occurs.
 
 Confirm `jq` is available; the distill step requires it.
 
@@ -116,14 +129,20 @@ cheap now and wasteful once a corpus has been downloaded.
 ### Step 2 — Fetch the corpus
 
 ```bash
-bash {skill_dir}/scripts/fetch-github-corpus.sh OWNER/NAME 30 150 tmp/pr-review-intelligence
+bash {skill_dir}/scripts/fetch-github-corpus.sh OWNER/NAME 30 150 tmp/pr-review-intelligence <host>
 ```
 
-or, for GitLab:
+or, for GitLab — pass `project_encoded` from step 1, since GitLab projects can be
+nested under subgroups and the API wants the path URL-encoded:
 
 ```bash
-bash {skill_dir}/scripts/fetch-gitlab-corpus.sh PROJECT_ID 30 150 tmp/pr-review-intelligence
+bash {skill_dir}/scripts/fetch-gitlab-corpus.sh <project_encoded> 30 150 tmp/pr-review-intelligence <host>
 ```
+
+The trailing `<host>` is the value resolved in step 1. Both scripts pass it to
+every API call and verify authentication against *that* host before fetching, so a
+wrong or unauthenticated host fails immediately instead of quietly redirecting to
+the public instance. The census output echoes the host it queried — check it.
 
 The script runs a counts-only census first and only fetches full detail for PRs
 that actually carry review threads. This matters: on an active repository only
@@ -323,6 +342,37 @@ Re-run when review practice shifts — after a team change, an architecture migr
 or the adoption of a new review bot. Diff the new `evidence/observations.jsonl`
 against the committed one to see what changed. A rule that has stopped appearing in
 recent PRs is a rule the team may have retired.
+
+## Self-hosted instances
+
+GitHub Enterprise (Server or Cloud, including `*.ghe.com`) and self-hosted GitLab
+work through the same code path as the public hosts — the API shapes are identical
+and the only difference is the hostname. What makes them a distinct concern is the
+failure mode, not the feature set:
+
+**`gh` and `glab` both default to their public host.** Neither errors when given an
+Enterprise repo without a hostname; they query `github.com`/`gitlab.com` instead.
+Since `owner/name` is not globally unique across instances, a request for an
+internal `acme/api` can land on an unrelated public project and produce a complete,
+well-formed, entirely wrong report. This is why step 1 resolves the host once and
+every later call passes it explicitly.
+
+Prerequisites: `gh auth login --hostname <host>` (or `glab auth login --hostname
+<host>`) before the first run.
+
+Two caveats worth stating in the report when the host is not public:
+
+- **Search indexing.** The GitHub census depends on issue/PR search. A self-hosted
+  instance with a stale, restricted, or still-building index returns few results
+  regardless of real review activity, and a low yield then means "search is
+  incomplete", not "this team doesn't review". The fetch script says so when the
+  host is not `github.com`; don't report a thin corpus as a finding about the team
+  without ruling this out.
+- **Unverified against a live instance.** The GraphQL fields used — `reviewThreads`,
+  `isResolved`, `isOutdated`, `reactionGroups`, `__typename` — are long-standing and
+  present in supported GitHub Enterprise Server schemas, but this path has not been
+  exercised against a real Enterprise or self-hosted GitLab deployment. Treat the
+  first run on a new instance as a verification run.
 
 ## Forge differences
 

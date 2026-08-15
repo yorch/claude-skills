@@ -8,11 +8,17 @@
 #                subagents read files instead of flooding orchestrator context.
 #
 # Usage:
-#   fetch-github-corpus.sh OWNER/REPO [TARGET] [SCAN_CAP] [OUTDIR]
+#   fetch-github-corpus.sh OWNER/REPO [TARGET] [SCAN_CAP] [OUTDIR] [HOST]
 #
 #   TARGET    PRs with review discussion to collect   (default 30)
 #   SCAN_CAP  merged PRs to scan before giving up     (default 150)
 #   OUTDIR    corpus directory                        (default tmp/pr-review-intelligence)
+#   HOST      forge hostname                          (default github.com)
+#
+# HOST must be passed for GitHub Enterprise. `gh` falls back to github.com
+# whenever a hostname is neither given nor inferable from the current
+# directory's git remote, so an unqualified Enterprise run silently mines the
+# PUBLIC repo of the same name. Resolve it with resolve-target.sh and pass it.
 #
 # Writes:
 #   OUTDIR/census.json      sample frame + yield stats
@@ -20,10 +26,11 @@
 
 set -euo pipefail
 
-REPO="${1:?usage: fetch-github-corpus.sh OWNER/REPO [TARGET] [SCAN_CAP] [OUTDIR]}"
+REPO="${1:?usage: fetch-github-corpus.sh OWNER/REPO [TARGET] [SCAN_CAP] [OUTDIR] [HOST]}"
 TARGET="${2:-30}"
 SCAN_CAP="${3:-150}"
 OUTDIR="${4:-tmp/pr-review-intelligence}"
+HOST="${5:-github.com}"
 
 OWNER="${REPO%%/*}"
 NAME="${REPO##*/}"
@@ -34,7 +41,11 @@ fi
 
 command -v gh >/dev/null || { echo "error: gh not found on PATH" >&2; exit 2; }
 command -v jq >/dev/null || { echo "error: jq not found on PATH" >&2; exit 2; }
-gh auth status >/dev/null 2>&1 || { echo "error: gh is not authenticated" >&2; exit 2; }
+gh auth status --hostname "$HOST" >/dev/null 2>&1 || {
+  echo "error: gh is not authenticated to ${HOST}." >&2
+  echo "       Run: gh auth login --hostname ${HOST}" >&2
+  exit 2
+}
 
 mkdir -p "$OUTDIR/raw"
 QUERYDIR="$(mktemp -d)"
@@ -93,13 +104,13 @@ CENSUS_RAW="$QUERYDIR/census-nodes.json"
 
 after=""
 scanned=0
-echo "==> census: scanning up to ${SCAN_CAP} merged PRs in ${REPO}" >&2
+echo "==> census: scanning up to ${SCAN_CAP} merged PRs in ${REPO} on ${HOST}" >&2
 
 while [ "$scanned" -lt "$SCAN_CAP" ]; do
   if [ -z "$after" ]; then
-    page="$(gh api graphql -F query=@"$QUERYDIR/census.graphql" -F q="$SEARCH_Q")"
+    page="$(gh api graphql --hostname "$HOST" -F query=@"$QUERYDIR/census.graphql" -F q="$SEARCH_Q")"
   else
-    page="$(gh api graphql -F query=@"$QUERYDIR/census.graphql" -F q="$SEARCH_Q" -F after="$after")"
+    page="$(gh api graphql --hostname "$HOST" -F query=@"$QUERYDIR/census.graphql" -F q="$SEARCH_Q" -F after="$after")"
   fi
 
   count="$(jq '.data.search.nodes | length' <<<"$page")"
@@ -141,6 +152,12 @@ echo "==> census done: ${SELECTED} selected from ${SCANNED} scanned (yield ${YIE
 if [ "$SELECTED" -eq 0 ]; then
   echo "error: no merged PRs with review threads found in the scan window." >&2
   echo "       This repo may route review outside PR threads, or may be too young." >&2
+  if [ "$HOST" != "github.com" ]; then
+    echo "       On ${HOST}: the census depends on issue/PR search, and a" >&2
+    echo "       self-hosted instance with a stale or restricted search index" >&2
+    echo "       returns few results regardless of actual review activity." >&2
+    echo "       Confirm search works there before concluding the repo is thin." >&2
+  fi
   exit 1
 fi
 
@@ -154,7 +171,7 @@ while read -r num; do
     echo "    pr-${num} cached" >&2
     continue
   fi
-  gh api graphql -F query=@"$QUERYDIR/detail.graphql" \
+  gh api graphql --hostname "$HOST" -F query=@"$QUERYDIR/detail.graphql" \
     -F owner="$OWNER" -F name="$NAME" -F number="$num" >"$out"
 
   # Detect silent pagination truncation: totalCount vs returned nodes.
@@ -170,5 +187,6 @@ echo "==> corpus ready: ${OUTDIR}/raw/ (${SELECTED} PRs, ${truncated} truncated)
 
 jq -n --argjson scanned "$SCANNED" --argjson selected "$SELECTED" \
       --argjson truncated "$truncated" --arg yield "$YIELD" --arg repo "$REPO" \
-  '{repo: $repo, scanned: $scanned, selected: $selected,
+  --arg host "$HOST" \
+  '{repo: $repo, host: $host, scanned: $scanned, selected: $selected,
     truncated: $truncated, yield_pct: ($yield | tonumber)}'
