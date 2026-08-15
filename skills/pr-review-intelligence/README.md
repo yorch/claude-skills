@@ -6,7 +6,9 @@ the PRs where each point was raised. The output is **codified tribal knowledge**
 if a rule would be true of any repository, it does not belong in the output.
 
 Works with GitHub (`gh`) and GitLab (`glab`). Read-only on source; the only files
-written are under `docs/code-review/` and a disposable `tmp/` scratch directory.
+written are under the output directory and a disposable `tmp/` scratch directory.
+The output directory is claimed with a provenance marker on first run, and the
+skill refuses to overwrite a directory it did not create.
 
 ## When to use
 
@@ -17,7 +19,7 @@ written are under `docs/code-review/` and a disposable `tmp/` scratch directory.
 
 ## What it produces
 
-In `docs/code-review/`:
+In `docs/review-intelligence/` (override with `output_dir`):
 
 - `review-guidelines.md` — ranked rules grouped by path glob, each with what to
   detect, the team's stated reasoning, and citing PRs
@@ -65,8 +67,9 @@ overrides the pin session-wide. See SKILL.md § Model tiering.
 - `references/SCORING.md` — scoring, routing, evidence gate, rule quality bar.
   Orchestrator-only; the analyst never reads it
 - `references/TEMPLATES.md` — templates for the five output documents
-- `scripts/` — corpus fetch and distill for both forges, an observation-contract
-  validator that applies the routing gates by arithmetic, and a GitLab fixture
+- `scripts/` — corpus fetch and distill for both forges, batch manifests, an
+  output-directory guard, an observation-contract validator that applies the
+  routing gates by arithmetic, and a GitLab fixture
 
 ## Related
 

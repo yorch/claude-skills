@@ -284,5 +284,5 @@ tmp/pr-review-intelligence/
 ```
 
 Add `tmp/` to the target repo's `.gitignore` if it is not already ignored. The
-durable artifact is `docs/code-review/`; `tmp/` is disposable scratch that makes
+durable artifact is the output directory; `tmp/` is disposable scratch that makes
 re-runs cheap.

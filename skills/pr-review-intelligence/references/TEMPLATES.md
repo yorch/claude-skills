@@ -1,8 +1,9 @@
 # Output Templates
 
-Templates for the five artifacts written to `docs/code-review/`. Placeholders use
-`{{DOUBLE_BRACES}}`. Delete any section that has no content rather than emitting an
-empty heading.
+Templates for the five artifacts written to the output directory (default
+`docs/review-intelligence/`). Placeholders use `{{DOUBLE_BRACES}}`; substitute
+**every** one, including `{{OUTPUT_DIR}}`. Delete any section that has no content
+rather than emitting an empty heading.
 
 Every artifact starts with the provenance block so a reader can tell how much weight
 the document carries and when it went stale.
@@ -271,7 +272,7 @@ does not bound its own claims invites over-reading.
 
 ## Template E — routing stub
 
-Written to `docs/code-review/AGENTS-snippet.md`, for the user to paste into their
+Written to `{{OUTPUT_DIR}}/AGENTS-snippet.md`, for the user to paste into their
 `AGENTS.md`, `CLAUDE.md`, or `.github/copilot-instructions.md`. Never edit those
 files directly — they are the user's, and may carry instructions this skill has no
 business rewriting.
@@ -282,14 +283,14 @@ business rewriting.
 Mined from this repository's own {{PR_OR_MR}} review history. Load the guideline
 file matching the files under review.
 
-- Always read: [docs/code-review/review-guidelines.md](docs/code-review/review-guidelines.md)
-- Always read: [docs/code-review/do-not-flag.md](docs/code-review/do-not-flag.md)
+- Always read: [{{OUTPUT_DIR}}/review-guidelines.md]({{OUTPUT_DIR}}/review-guidelines.md)
+- Always read: [{{OUTPUT_DIR}}/do-not-flag.md]({{OUTPUT_DIR}}/do-not-flag.md)
 
 Area-specific patterns:
 
 | When reviewing | Read |
 | --- | --- |
-| `{{GLOB}}` | [docs/code-review/patterns/{{SLUG}}.md](docs/code-review/patterns/{{SLUG}}.md) |
+| `{{GLOB}}` | [{{OUTPUT_DIR}}/patterns/{{SLUG}}.md]({{OUTPUT_DIR}}/patterns/{{SLUG}}.md) |
 ```
 
 Keep the stub short. Its whole purpose is routing — duplicating rule content here
