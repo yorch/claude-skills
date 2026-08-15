@@ -52,6 +52,22 @@ json_escape() {
   printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
 }
 
+# True only if $1 is the ROOT of a git worktree.
+#
+# This guard is load-bearing, not defensive clutter. `.delegates/worktrees/<id>`
+# lives INSIDE the repo, so if that directory exists but is not a worktree --
+# a partially failed `clean` (whose fallback is `rm -rf` + `prune`), or a
+# hand-made directory -- then every `git -C "$wt" ...` silently resolves to the
+# MAIN repo by walking up. `add -A` would then stage the user's own uncommitted
+# work plus all of `.delegates/`, and the capture commit would land on their
+# branch. Paths are normalized with `pwd -P` so symlinked roots still compare.
+is_worktree_root() {
+  _d=$(cd "$1" 2>/dev/null && pwd -P) || return 1
+  _t=$(git -C "$_d" rev-parse --show-toplevel 2>/dev/null) || return 1
+  _t=$(cd "$_t" 2>/dev/null && pwd -P) || return 1
+  [ "$_d" = "$_t" ]
+}
+
 # ---------------------------------------------------------------- list
 
 cmd_list() {
@@ -235,16 +251,19 @@ EOF
   if [ "$rc" -ne 0 ]; then
     printf 'harness exited %s; see %s/stderr.log\n' "$rc" "$run_dir" >&2
     # The run dir and (for build) the branch now exist, so re-running the same
-    # --task-id is refused by the duplicate guards. Name the recovery explicitly
-    # rather than leaving a dead end: artifacts are kept because a failed run's
-    # logs are often the point.
+    # --task-id is refused by the duplicate guards. Name the recovery, but lead
+    # with the NON-destructive path: a harness that failed late may still have
+    # produced real work, and the logs are often the point of a failed run.
     if [ "$mode" = build ]; then
-      printf 'to retry this task-id: delegate.sh clean %s --force && git branch -D delegate/%s && rm -rf %s\n' \
+      printf 'the worktree is intact -- a harness can fail late with real work already done.\n' >&2
+      printf '  keep it:    delegate.sh collect %s     # commits whatever it produced\n' "$task_id" >&2
+      printf '  retry:      use a different --task-id (cheapest, keeps this run)\n' >&2
+      printf '  discard:    delegate.sh clean %s --force && git branch -D delegate/%s && rm -rf %s\n' \
         "$task_id" "$task_id" "$run_dir" >&2
+      printf '              (--force DISCARDS uncommitted output; rm -rf deletes stderr.log)\n' >&2
     else
-      printf 'to retry this task-id: rm -rf %s\n' "$run_dir" >&2
+      printf '  retry: use a different --task-id, or rm -rf %s to reuse this one\n' "$run_dir" >&2
     fi
-    printf 'or simply pick a different --task-id.\n' >&2
     exit 1
   fi
 }
@@ -290,10 +309,25 @@ cmd_collect() {
     return 0
   fi
 
+  # Never run git against a directory that is not actually a worktree: it would
+  # resolve to the parent repo and commit the user's own work onto their branch.
+  if ! is_worktree_root "$wt"; then
+    die "$wt exists but is not a git worktree root; refusing to run git there (a stale directory from a failed clean?). Remove it manually after checking its contents."
+  fi
+
   # Count the delegate's OWN commits before we add one of our own, so the
   # commit-discipline check can still tell whether the delegate obeyed a
-  # "do not commit" brief.
-  delegate_commits=$(git -C "$wt" rev-list --count "$base_sha"..HEAD 2>/dev/null || echo 0)
+  # "do not commit" brief. Persisted on first capture: SKILL.md prescribes
+  # running `collect` twice (verify, then integrate), and on the second run
+  # base_sha..HEAD already contains our own capture commit, which would
+  # otherwise be misattributed to the delegate -- inverting the exact answer
+  # this field exists to give.
+  if [ -f "$run_dir/delegate_commits" ]; then
+    delegate_commits=$(cat "$run_dir/delegate_commits")
+  else
+    delegate_commits=$(git -C "$wt" rev-list --count "$base_sha"..HEAD 2>/dev/null || echo 0)
+    printf '%s\n' "$delegate_commits" >"$run_dir/delegate_commits"
+  fi
 
   # Stage everything so uncommitted AND untracked delegate output are captured.
   # Then COMMIT it onto the branch: the prompt contract tells delegates not to
@@ -359,13 +393,20 @@ cmd_clean() {
   # Refuse to discard work that was never committed to the branch. Removing the
   # worktree deletes the working tree, so uncommitted output would be lost while
   # the "kept" branch stayed empty. `collect` is what commits it.
-  #
-  # Fail CLOSED: if `git status` itself errors (moved repo, pruned admin entry,
-  # index.lock race) its output is empty, which would otherwise read as "clean"
-  # and re-enable the very data loss this guard exists to prevent.
   if [ "$force" != --force ]; then
-    if ! status=$(git -C "$wt" status --porcelain 2>&1); then
-      die "cannot determine worktree state for $task_id (git status failed: $status); refusing to remove -- use --force only if you intend to discard it"
+    # A directory that is not a worktree root would make `git status` report on
+    # the PARENT repo -- so a dirty main checkout would masquerade as dirty
+    # delegate output. Check identity before trusting any git answer here.
+    if ! is_worktree_root "$wt"; then
+      die "$wt exists but is not a git worktree root; refusing to touch it (a stale directory from a failed clean?). Inspect its contents, then remove it manually."
+    fi
+    # Capture stdout ONLY. Merging stderr would let a benign warning that git
+    # prints while still exiting 0 (fsmonitor/watchman hooks, "unable to
+    # access", deprecation notices) read as uncommitted output -- steering the
+    # user toward --force, the one command that destroys work. Fail closed on a
+    # genuine non-zero exit instead.
+    if ! status=$(git -C "$wt" status --porcelain 2>/dev/null); then
+      die "cannot determine worktree state for $task_id (git status failed); refusing to remove -- use --force only if you intend to discard it"
     fi
     if [ -n "$status" ]; then
       die "worktree $task_id has uncommitted delegate output; run 'delegate.sh collect $task_id' first (or 'clean $task_id --force' to discard it)"
