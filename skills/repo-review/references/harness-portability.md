@@ -10,14 +10,34 @@ what is still unproven.
 |---|---|---|---|---|
 | Claude Code | native | `agents/*.md` | tool allowlist omits `Edit`/`Write` | **verified** (native) |
 | Pi | `--skill` | `~/.pi/agent/agents/*.md` (needs `pi-subagents`) | tool allowlist | **verified by running** |
-| Codex | `~/.codex/skills` | `~/.codex/agents/*.toml` | `sandbox_mode = "read-only"` | flags read from CLI; **run unverified** |
-| Gemini CLI | `gemini skills` | `~/.gemini/agents/*.md` | tool allowlist | documented only; **run unverified** |
+| Codex | `~/.codex/skills` | `~/.codex/agents/*.toml` | `sandbox_mode = "read-only"` | **verified by running** |
+| Gemini CLI | `gemini skills` | `~/.gemini/agents/*.md` | tool allowlist | install verified; **run blocked** (see below) |
 
-Pi was exercised end to end: the generated `security-reviewer` reviewed a
+**Pi** was exercised end to end: the generated `security-reviewer` reviewed a
 planted file and returned a contract-conformant report — `SEC-*` IDs, the
 P0–P3 scale, `file:line` evidence, the output-budget line, and a **redacted**
-secret (`sk_live_…`). The contract survived a different harness and a different
-model. Codex and Gemini rows come from their CLIs and docs, not from a run.
+secret (`sk_live_…`).
+
+**Codex** was exercised end to end and proved something stronger. All eight
+generated agents were discovered by name, and the review came back matching the
+security-reviewer's exact output contract: the full 8-column findings table
+including *Attack scenario*, `[confirmed]` / `[auto-fix]` tags, the dependency
+audit summary, Top 3, and questions carrying finding IDs and a recommended
+option — with the secret redacted as `sk_live_…`.
+
+Critically, `sandbox_mode` is enforced **per agent, and the parent's broader
+permission does not leak into the child**:
+
+```
+parent -s workspace-write, writes directly        -> file created   (control)
+parent -s workspace-write, spawns read-only agent -> "I can't create files in
+   and orders it to write a file                      this read-only security
+                                                      review role."  no file
+```
+
+That makes Codex's read-only guarantee genuinely stronger than Claude Code's:
+a real runtime sandbox rather than an inference from which tools were offered.
+The contract survived two different harnesses and two different models.
 
 ## Skills are already portable
 
@@ -77,6 +97,20 @@ Pi needs `pi install npm:pi-subagents`. Codex ships `multi_agent` as a stable
 feature, on by default (verified: `codex features list`). If no subagent
 mechanism exists, the orchestrator runs the six dimensions sequentially in its
 own context and labels the report single-context — see SKILL.md Phase 1.
+
+## Gemini: install works, execution is blocked here
+
+`scripts/install-agents.sh --harness gemini` links the wrappers correctly, and
+`gemini skills list` reads this repo's skills. But **no `gemini` invocation
+completes on this machine** — an earlier run failed fast with
+`IneligibleTierError: This client is no longer supported for Gemini Code Assist
+for individuals`, and it now hangs indefinitely with no output instead.
+
+A control run with **the agents uninstalled hangs identically**, so this is a
+pre-existing problem with the Gemini CLI/auth here, *not* something the port
+introduced. The wrapper format matches Gemini's documented
+`~/.gemini/agents/*.md` + frontmatter convention, but treat the Gemini row as
+unproven until someone runs it on a working install.
 
 ## Setup
 

@@ -26,6 +26,8 @@ Be precise about how strongly that is enforced, because it differs per agent:
 - **`prod-value-reviewer`, `arch-quality-reviewer`, `evolution-strategist`** have `tools: Read, Grep, Glob`. They *cannot* write — the constraint is enforced by the tool layer.
 - **`security-reviewer`, `docs-accuracy-reviewer`, `test-reliability-reviewer`** additionally have `Bash`, which can write anything. Their read-only behavior is enforced by prose, not by the tool layer, and is therefore weaker.
 
+That split is specific to Claude Code. On Codex the same six agents run under `sandbox_mode = "read-only"`, a runtime sandbox verified to hold even when a `workspace-write` parent orders the child to write — so **every** reviewer is genuinely read-only there, `Bash` included. See `references/harness-portability.md`.
+
 Phase 1 can therefore touch **untracked build and test byproducts** — `node_modules/`, `coverage/`, `.pytest_cache/`, scratch test databases — if the test suite is run. Do not promise a user an untouched working tree; promise that no tracked file changes before Phase 3.
 
 **Run the suite in non-writing mode.** Snapshot files (`__snapshots__/*.snap`, `.ambr`) are *tracked* artifacts, and Jest/Vitest write new ones by default when a test has no stored snapshot — which would dirty a committed file during a phase that promises not to. Set `CI=true`, and pass the runner's non-writing flag: `--ci` (Jest/Vitest), `--snapshot-update=none` where supported, `pytest -p no:cacheprovider`. If the suite cannot be run without writing tracked files, report it as unrunnable rather than running it.
