@@ -75,6 +75,9 @@ findings makes it confirm them rather than look with fresh eyes.
 ## Files
 
 - `SKILL.md` — shared vocabulary, the phase workflow, and the orchestrator's rules
+- `references/harness-portability.md` — running this outside Claude Code: what was
+  verified on which harness, the tool-vocabulary mapping, and the silent-empty-review
+  hazard that makes build-time validation mandatory
 
 ## Related agents
 

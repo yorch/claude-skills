@@ -106,6 +106,10 @@ Invoke these six subagents **in parallel**, passing each the Repo Brief verbatim
 | `test-reliability-reviewer` | Testing & reliability (TEST-*) |
 | `evolution-strategist` | Product evolution (EVOL-*) |
 
+**If this harness has no subagent capability**, run the six dimensions yourself, sequentially, in your own context — using each agent's contract from `agents/<name>.md` as your instructions for that pass. The review still works; it is slower, the dimensions are no longer independent, and one context holds everything. Label the report **single-context review** so nobody mistakes it for six independent passes. Do not silently skip dimensions.
+
+**Treat an empty review as a misconfiguration, not a clean dimension.** If a reviewer returns no findings *and* cites no files it read, it almost certainly had no usable tools — a ported agent whose tool names do not match this harness's vocabulary is granted nothing and returns nothing, with a zero exit code. Six such sections would synthesise into a confident "no issues found" on a repo nobody actually examined. Re-run that dimension; if it comes back empty again, record it as `not reviewed (harness/tooling)` in the scorecard rather than as a grade. See `references/harness-portability.md`.
+
 Each returns findings, recommendations, and a Questions-for-the-user list. If an agent finds a needed artifact doesn't exist (no tests, no docs, no CI), that IS the finding — it should report and move on, not stall.
 
 ## Phase 2 — Synthesis (you)
