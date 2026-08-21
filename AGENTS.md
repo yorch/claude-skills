@@ -94,3 +94,20 @@ When adding a new agent:
    The `tools` list is a constraint contract — omit `Edit` if the agent must not modify files, omit `Bash` if it must not run shell commands. Constraints expressed as missing tools are stronger than constraints expressed in prose.
 3. Write the agent's system prompt below the frontmatter. Cover: required inputs, what it must do, hard rules, output contract.
 4. If the agent is used by a skill, reference it from the skill's SKILL.md so the relationship is discoverable.
+
+### Portability to other harnesses
+
+`agents/*.md` is the **single source of truth**. `generated/agents/<harness>/` is
+produced from it by `scripts/sync-agents.sh` (Pi and Gemini get Markdown with
+mapped tool names; Codex gets TOML with `sandbox_mode`). Never edit generated
+files; CI runs `sync-agents.sh --check` and fails on drift.
+
+If you add a tool to an agent's `tools:` list, add its mapping to `map_tool()` in
+`scripts/sync-agents.sh`. An unmapped name is a hard build error on purpose: a
+harness handed a foreign tool name grants **no** tools and returns an empty
+review with exit 0, which would otherwise synthesise into a false "no findings".
+
+`scripts/install-agents.sh --harness <name>` symlinks the generated agents into
+that harness's user-scope directory. See
+`skills/repo-review/references/harness-portability.md`.
+
